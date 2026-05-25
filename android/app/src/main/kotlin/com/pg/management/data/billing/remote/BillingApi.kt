@@ -48,4 +48,10 @@ interface BillingApi {
 
     @POST("invoices/generate")
     suspend fun generateInvoice(@Body req: GenerateInvoiceRequest): ApiEnvelope<GenerateInvoiceResponse>
+
+    @GET("bills/members-summary")
+    suspend fun membersSummary(@Query("billing_month") billingMonth: String): ApiEnvelope<List<MembersSummaryRowDto>>
+
+    @POST("bills/set-status")
+    suspend fun setStatus(@Body req: SetStatusRequest): ApiEnvelope<MembersSummaryBill>
 }

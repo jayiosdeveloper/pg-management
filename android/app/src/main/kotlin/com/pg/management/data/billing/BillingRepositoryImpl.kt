@@ -88,4 +88,27 @@ class BillingRepositoryImpl @Inject constructor(
 
     override suspend fun generateInvoice(tenantId: String, billingMonth: String): String? =
         safeCall(moshi) { api.generateInvoice(GenerateInvoiceRequest(tenantId, billingMonth)) }.pdfUrl
+
+    override suspend fun membersSummary(billingMonth: String): List<com.pg.management.domain.model.MemberMonthStatus> =
+        safeCall(moshi) { api.membersSummary(billingMonth) }.map { row ->
+            com.pg.management.domain.model.MemberMonthStatus(
+                tenantId = row.tenantId,
+                fullName = row.user?.fullName.orEmpty(),
+                userCode = row.user?.userCode,
+                phone = row.user?.phone,
+                roomNumber = row.room?.roomNumber,
+                bedLabel = row.bed?.bedLabel,
+                monthlyRent = row.monthlyRent,
+                billId = row.bill?.id,
+                amount = row.amount,
+                amountPaid = row.amountPaid,
+                status = row.status,
+            )
+        }
+
+    override suspend fun setStatus(tenantId: String, billingMonth: String, status: String, amount: Double?, paidAmount: Double?) {
+        safeCall(moshi) {
+            api.setStatus(com.pg.management.data.billing.remote.SetStatusRequest(tenantId, billingMonth, status, amount, paidAmount))
+        }
+    }
 }

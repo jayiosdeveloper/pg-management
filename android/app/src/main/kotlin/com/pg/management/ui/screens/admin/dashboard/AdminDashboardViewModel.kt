@@ -2,6 +2,7 @@ package com.pg.management.ui.screens.admin.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pg.management.core.events.RefreshEvents
 import com.pg.management.domain.repository.RoomRepository
 import com.pg.management.domain.repository.TenantRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,12 +34,19 @@ data class DashboardUiState(
 class AdminDashboardViewModel @Inject constructor(
     private val tenants: TenantRepository,
     private val rooms: RoomRepository,
+    refreshEvents: RefreshEvents,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DashboardUiState())
     val state: StateFlow<DashboardUiState> = _state.asStateFlow()
 
-    init { refresh() }
+    init {
+        refresh()
+        viewModelScope.launch { refreshEvents.tenantsChanged.collect { refresh() } }
+        viewModelScope.launch { refreshEvents.roomsChanged.collect { refresh() } }
+        viewModelScope.launch { refreshEvents.workersChanged.collect { refresh() } }
+        viewModelScope.launch { refreshEvents.billsChanged.collect { refresh() } }
+    }
 
     fun refresh() {
         _state.update { it.copy(loading = true, error = null) }

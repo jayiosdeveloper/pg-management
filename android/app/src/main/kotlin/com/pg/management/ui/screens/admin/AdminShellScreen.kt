@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Apartment
 import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.outlined.Engineering
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.People
@@ -32,6 +33,7 @@ import com.pg.management.ui.screens.admin.dashboard.AdminDashboardScreen
 import com.pg.management.ui.screens.admin.more.AdminMoreScreen
 import com.pg.management.ui.screens.admin.rooms.RoomsListScreen
 import com.pg.management.ui.screens.admin.tenants.TenantsListScreen
+import com.pg.management.ui.screens.admin.workers.WorkersListScreen
 import com.pg.management.ui.screens.session.SessionViewModel
 import com.pg.management.ui.theme.BrandCyan
 import com.pg.management.ui.theme.BrandDeepDarker
@@ -44,8 +46,10 @@ fun AdminShellScreen(
     onAddTenant: () -> Unit,
     onOpenRoomDetail: (String) -> Unit,
     onAddRoom: () -> Unit,
-    onOpenBillDetail: (String) -> Unit,
     onOpenMemberCredentials: (String) -> Unit,
+    onOpenWorkerDetail: (String) -> Unit,
+    onAddWorker: () -> Unit,
+    onOpenWorkerCredentials: (String) -> Unit,
     sessionVm: SessionViewModel = hiltViewModel(),
 ) {
     var selected by remember { mutableIntStateOf(0) }
@@ -53,6 +57,7 @@ fun AdminShellScreen(
         listOf(
             AdminTab("Home", Icons.Outlined.Dashboard),
             AdminTab("Members", Icons.Outlined.People),
+            AdminTab("Workers", Icons.Outlined.Engineering),
             AdminTab("Rooms", Icons.Outlined.Apartment),
             AdminTab("Bills", Icons.Outlined.Payments),
             AdminTab("More", Icons.Outlined.MoreHoriz),
@@ -89,11 +94,12 @@ fun AdminShellScreen(
         GradientBackground {
             Box(Modifier.padding(padding)) {
                 when (selected) {
-                    0 -> AdminDashboardScreen(onSeeAllTenants = { selected = 1 }, onSeeAllRooms = { selected = 2 })
+                    0 -> AdminDashboardScreen(onSeeAllTenants = { selected = 1 }, onSeeAllRooms = { selected = 3 })
                     1 -> TenantsListScreen(onTenantClick = onOpenTenantDetail, onAddTenant = onAddTenant, onShowInfo = onOpenMemberCredentials)
-                    2 -> RoomsListScreen(onRoomClick = onOpenRoomDetail, onAddRoom = onAddRoom)
-                    3 -> AdminBillingScreen(onBillClick = onOpenBillDetail)
-                    4 -> AdminMoreScreen(onLogout = sessionVm::logout, loggingOut = sessionState.loggingOut, session = sessionState.session)
+                    2 -> WorkersListScreen(onWorkerClick = onOpenWorkerDetail, onAddWorker = onAddWorker, onShowInfo = onOpenWorkerCredentials)
+                    3 -> RoomsListScreen(onRoomClick = onOpenRoomDetail, onAddRoom = onAddRoom)
+                    4 -> AdminBillingScreen()
+                    5 -> AdminMoreScreen(onLogout = sessionVm::logout, loggingOut = sessionState.loggingOut, session = sessionState.session)
                 }
             }
         }

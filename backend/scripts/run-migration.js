@@ -1,5 +1,6 @@
-// Runs the initial SQL migration directly against the Supabase Postgres database.
-// Requires DATABASE_URL in .env (Supabase Settings -> Database -> Connection string -> URI).
+// Runs every SQL file in db/migrations/ in lexical order against the
+// Supabase Postgres instance. The scripts are written with IF NOT EXISTS
+// / idempotent guards so re-running is safe.
 
 require('dotenv').config();
 const fs = require('fs');
@@ -12,8 +13,10 @@ if (!DATABASE_URL || DATABASE_URL.startsWith('PASTE_')) {
   process.exit(1);
 }
 
-const MIGRATION = path.join(__dirname, '..', 'db', 'migrations', '001_initial_schema.sql');
-const sql = fs.readFileSync(MIGRATION, 'utf-8');
+const MIGRATIONS_DIR = path.join(__dirname, '..', 'db', 'migrations');
+const files = fs.readdirSync(MIGRATIONS_DIR)
+  .filter((f) => f.endsWith('.sql'))
+  .sort();
 
 (async () => {
   const client = new Client({
@@ -23,18 +26,19 @@ const sql = fs.readFileSync(MIGRATION, 'utf-8');
   try {
     console.log('[migrate] Connecting...');
     await client.connect();
-    console.log('[migrate] Running 001_initial_schema.sql ...');
-    await client.query(sql);
-    console.log('[migrate] ✓ Migration complete');
-
-    // Force PostgREST schema cache reload so supabase-js sees the new tables immediately.
+    for (const f of files) {
+      console.log(`[migrate] Running ${f} ...`);
+      const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, f), 'utf-8');
+      await client.query(sql);
+      console.log(`[migrate]   ✓ ${f}`);
+    }
     await client.query("NOTIFY pgrst, 'reload schema';");
     console.log('[migrate] ✓ PostgREST schema cache reloaded');
 
     const { rows } = await client.query(
       "select tablename from pg_tables where schemaname = 'public' order by tablename;"
     );
-    console.log('\n[migrate] Tables now in public schema:');
+    console.log('\n[migrate] Tables in public schema:');
     rows.forEach((r) => console.log('  -', r.tablename));
   } catch (e) {
     console.error('[migrate] ✘ Failed:', e.message);

@@ -121,3 +121,55 @@ data class GenerateInvoiceResponse(
     @Json(name = "invoice_number") val invoiceNumber: String,
     @Json(name = "pdf_url") val pdfUrl: String? = null,
 )
+
+// Bills overhaul — member-summary list ---------------------------------
+@JsonClass(generateAdapter = true)
+data class MembersSummaryUser(
+    val id: String? = null,
+    @Json(name = "full_name") val fullName: String? = null,
+    @Json(name = "user_code") val userCode: String? = null,
+    val email: String? = null,
+    val phone: String? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class MembersSummaryRoom(
+    val id: String? = null,
+    @Json(name = "room_number") val roomNumber: String? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class MembersSummaryBed(
+    val id: String? = null,
+    @Json(name = "bed_label") val bedLabel: String? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class MembersSummaryBill(
+    val id: String,
+    val amount: Double,
+    @Json(name = "amount_paid") val amountPaid: Double,
+    val status: String,
+)
+
+@JsonClass(generateAdapter = true)
+data class MembersSummaryRowDto(
+    @Json(name = "tenant_id") val tenantId: String,
+    val user: MembersSummaryUser?,
+    val room: MembersSummaryRoom?,
+    val bed: MembersSummaryBed?,
+    @Json(name = "monthly_rent") val monthlyRent: Double,
+    val bill: MembersSummaryBill?,
+    val status: String,
+    val amount: Double,
+    @Json(name = "amount_paid") val amountPaid: Double,
+)
+
+@JsonClass(generateAdapter = true)
+data class SetStatusRequest(
+    @Json(name = "tenant_id") val tenantId: String,
+    @Json(name = "billing_month") val billingMonth: String,
+    val status: String,           // "paid" | "partial" | "unpaid"
+    val amount: Double? = null,
+    @Json(name = "paid_amount") val paidAmount: Double? = null,
+)

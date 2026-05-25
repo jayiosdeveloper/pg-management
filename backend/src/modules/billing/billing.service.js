@@ -205,4 +205,104 @@ const summary = async (currentUser) => {
   return { total_due, overdue, paid_this_month, count_bills: bills?.length || 0 };
 };
 
-module.exports = { create, list, getById, update, remove, recordPayment, listPayments, bulkGenerate, summary };
+/**
+ * Member-list summary for a given month: every active member with their
+ * rent bill status. Powers the simple "Bills" tab on the admin app.
+ */
+const membersSummary = async ({ billing_month }) => {
+  const monthDate = `${billing_month}-01`;
+  const { data: tenants } = await supabase
+    .from('tenants')
+    .select(`
+      id, monthly_rent,
+      user:users!tenants_user_id_fkey ( id, full_name, user_code, email, phone ),
+      room:rooms ( id, room_number ),
+      bed:beds ( id, bed_label )
+    `)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false });
+
+  const tenantIds = (tenants || []).map((t) => t.id);
+  const billsByTenant = new Map();
+  if (tenantIds.length > 0) {
+    const { data: bills } = await supabase
+      .from('bills')
+      .select('id, tenant_id, amount, amount_paid, status')
+      .eq('category', 'rent')
+      .eq('billing_month', monthDate)
+      .in('tenant_id', tenantIds);
+    for (const b of bills || []) billsByTenant.set(b.tenant_id, b);
+  }
+
+  return (tenants || []).map((t) => {
+    const bill = billsByTenant.get(t.id) || null;
+    const monthlyRent = Number(t.monthly_rent ?? 0);
+    return {
+      tenant_id: t.id,
+      user: t.user || null,
+      room: t.room || null,
+      bed: t.bed || null,
+      monthly_rent: monthlyRent,
+      bill,
+      status: bill?.status ?? 'unbilled',
+      amount: Number(bill?.amount ?? monthlyRent),
+      amount_paid: Number(bill?.amount_paid ?? 0),
+    };
+  });
+};
+
+/**
+ * Admin toggle: mark a member's rent for the month as paid / partial / unpaid.
+ * Creates the bill if it doesn't exist yet; never errors on idempotent calls.
+ */
+const setStatus = async ({ tenant_id, billing_month, status, amount, paid_amount }) => {
+  const monthDate = `${billing_month}-01`;
+
+  const { data: tenant } = await supabase
+    .from('tenants').select('id, monthly_rent, room:rooms(monthly_rent)')
+    .eq('id', tenant_id).maybeSingle();
+  if (!tenant) throw NotFound('Member not found');
+
+  const defaultAmount = Number(amount ?? tenant.monthly_rent ?? tenant.room?.monthly_rent ?? 0);
+
+  const { data: existing } = await supabase
+    .from('bills').select('*')
+    .eq('tenant_id', tenant_id).eq('billing_month', monthDate).eq('category', 'rent').maybeSingle();
+
+  const dueDate = `${billing_month}-10`;
+  let billId = existing?.id;
+  const billAmount = existing?.amount != null ? Number(existing.amount) : defaultAmount;
+
+  if (!existing) {
+    const { data: inserted, error } = await supabase.from('bills').insert({
+      tenant_id, category: 'rent', amount: defaultAmount,
+      billing_month: monthDate, due_date: dueDate, description: 'Monthly rent',
+    }).select('id').single();
+    if (error) throw error;
+    billId = inserted.id;
+  }
+
+  const newAmountPaid = (() => {
+    if (status === 'paid') return billAmount;
+    if (status === 'unpaid') return 0;
+    const v = Number(paid_amount ?? 0);
+    if (v <= 0) throw BadRequest('For partial, paid_amount must be > 0');
+    if (v >= billAmount) throw BadRequest('For partial, paid_amount must be less than the bill amount');
+    return v;
+  })();
+
+  const { data: updated, error: uerr } = await supabase
+    .from('bills')
+    .update({ amount_paid: newAmountPaid })
+    .eq('id', billId)
+    .select('id, tenant_id, amount, amount_paid, status, billing_month')
+    .single();
+  if (uerr) throw uerr;
+  return updated;
+};
+
+module.exports = {
+  create, list, getById, update, remove,
+  recordPayment, listPayments, bulkGenerate, summary,
+  membersSummary, setStatus,
+};

@@ -49,6 +49,18 @@ const bulkGenerateSchema = Joi.object({
   skip_if_exists: Joi.boolean().default(true),
 }).or('tenant_ids', 'generate_for_all_active');
 
+const setStatusSchema = Joi.object({
+  tenant_id: Joi.string().uuid().required(),
+  billing_month: Joi.string().pattern(/^\d{4}-\d{2}$/).required(),
+  status: Joi.string().valid('paid', 'partial', 'unpaid').required(),
+  amount: Joi.number().min(0).optional(),         // override (defaults to tenant.monthly_rent)
+  paid_amount: Joi.number().min(0).optional(),    // required when status=partial
+});
+
+const membersSummarySchema = Joi.object({
+  billing_month: Joi.string().pattern(/^\d{4}-\d{2}$/).required(),
+});
+
 module.exports = {
   CATEGORIES,
   createBillSchema,
@@ -56,4 +68,6 @@ module.exports = {
   listBillsSchema,
   recordPaymentSchema,
   bulkGenerateSchema,
+  setStatusSchema,
+  membersSummarySchema,
 };

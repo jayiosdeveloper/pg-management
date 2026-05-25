@@ -9,6 +9,7 @@ import com.pg.management.data.complaint.remote.ComplaintApi
 import com.pg.management.data.notification.remote.NotificationApi
 import com.pg.management.data.room.remote.RoomApi
 import com.pg.management.data.tenant.remote.TenantApi
+import com.pg.management.data.worker.remote.WorkerApi
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Module
@@ -81,4 +82,8 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideComplaintApi(retrofit: Retrofit): ComplaintApi = retrofit.create(ComplaintApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideWorkerApi(retrofit: Retrofit): WorkerApi = retrofit.create(WorkerApi::class.java)
 }

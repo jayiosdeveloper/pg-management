@@ -4,15 +4,16 @@ const { requireAuth, requireRole } = require('../../middleware/auth');
 const v = require('./billing.validators');
 const c = require('./billing.controller');
 
-// Bills - admin can manage; tenants can read their own via list/get
 router.use(requireAuth);
 
 router.get('/summary', c.summary);
 router.get('/payments', c.listPayments);
+router.get('/members-summary', requireRole('admin'), validate(v.membersSummarySchema, 'query'), c.membersSummary);
 router.get('/', validate(v.listBillsSchema, 'query'), c.list);
 router.get('/:id', c.get);
 
-// Admin-only mutations from here on
+// Admin-only mutations
+router.post('/set-status', requireRole('admin'), validate(v.setStatusSchema), c.setStatus);
 router.post('/bulk-generate', requireRole('admin'), validate(v.bulkGenerateSchema), c.bulkGenerate);
 router.post('/', requireRole('admin'), validate(v.createBillSchema), c.createBill);
 router.patch('/:id', requireRole('admin'), validate(v.updateBillSchema), c.updateBill);

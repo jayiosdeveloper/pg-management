@@ -19,12 +19,15 @@ class RefreshEvents @Inject constructor() {
     private val _tenants = makeFlow()
     private val _rooms = makeFlow()
     private val _bills = makeFlow()
+    private val _workers = makeFlow()
 
     val tenantsChanged: SharedFlow<Unit> = _tenants
     val roomsChanged: SharedFlow<Unit> = _rooms
     val billsChanged: SharedFlow<Unit> = _bills
+    val workersChanged: SharedFlow<Unit> = _workers
 
     fun notifyTenantsChanged() { _tenants.tryEmit(Unit) }
     fun notifyRoomsChanged() { _rooms.tryEmit(Unit) }
     fun notifyBillsChanged() { _bills.tryEmit(Unit) }
+    fun notifyWorkersChanged() { _workers.tryEmit(Unit) }
 }

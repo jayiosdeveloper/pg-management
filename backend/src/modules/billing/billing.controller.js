@@ -47,4 +47,18 @@ const summary = asyncHandler(async (req, res) => {
   return ok(res, data);
 });
 
-module.exports = { list, get, createBill, updateBill, removeBill, recordPayment, listPayments, bulkGenerate, summary };
+const membersSummary = asyncHandler(async (req, res) => {
+  const data = await service.membersSummary(req.query);
+  return ok(res, data);
+});
+
+const setStatus = asyncHandler(async (req, res) => {
+  const data = await service.setStatus(req.body);
+  return ok(res, data, 'Status updated');
+});
+
+module.exports = {
+  list, get, createBill, updateBill, removeBill,
+  recordPayment, listPayments, bulkGenerate, summary,
+  membersSummary, setStatus,
+};
