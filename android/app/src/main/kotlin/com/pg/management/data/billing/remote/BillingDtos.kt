@@ -153,16 +153,28 @@ data class MembersSummaryBill(
 )
 
 @JsonClass(generateAdapter = true)
+data class MembersSummaryBillBreakdown(
+    val id: String,
+    val category: String,
+    val amount: Double,
+    @Json(name = "amount_paid") val amountPaid: Double,
+    val status: String,
+    val description: String? = null,
+)
+
+@JsonClass(generateAdapter = true)
 data class MembersSummaryRowDto(
     @Json(name = "tenant_id") val tenantId: String,
     val user: MembersSummaryUser?,
     val room: MembersSummaryRoom?,
     val bed: MembersSummaryBed?,
     @Json(name = "monthly_rent") val monthlyRent: Double,
-    val bill: MembersSummaryBill?,
+    val bills: List<MembersSummaryBillBreakdown> = emptyList(),
+    @Json(name = "total_amount") val totalAmount: Double = 0.0,
+    @Json(name = "total_paid") val totalPaid: Double = 0.0,
+    @Json(name = "total_pending") val totalPending: Double = 0.0,
+    @Json(name = "expected_total") val expectedTotal: Double = 0.0,
     val status: String,
-    val amount: Double,
-    @Json(name = "amount_paid") val amountPaid: Double,
 )
 
 @JsonClass(generateAdapter = true)

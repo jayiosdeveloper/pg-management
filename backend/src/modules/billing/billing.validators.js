@@ -53,14 +53,15 @@ const setStatusSchema = Joi.object({
   tenant_id: Joi.string().uuid().required(),
   billing_month: Joi.string().pattern(/^\d{4}-\d{2}$/).required(),
   status: Joi.string().valid('paid', 'partial', 'unpaid').required(),
-  category: Joi.string().valid(...CATEGORIES).default('rent'),
+  // "all" = waterfall across every bill the member has for the month; any
+  // specific category still targets just that one bill.
+  category: Joi.string().valid(...CATEGORIES, 'all').default('all'),
   amount: Joi.number().min(0).optional(),
   paid_amount: Joi.number().min(0).optional(),
 });
 
 const membersSummarySchema = Joi.object({
   billing_month: Joi.string().pattern(/^\d{4}-\d{2}$/).required(),
-  category: Joi.string().valid(...CATEGORIES).default('rent'),
 });
 
 module.exports = {

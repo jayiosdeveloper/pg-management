@@ -18,7 +18,6 @@ data class AdminBillingUi(
     val loading: Boolean = false,
     val rows: List<MemberMonthStatus> = emptyList(),
     val month: String = LocalDate.now().toString().take(7),
-    val category: String = "rent",
     val updatingTenantId: String? = null,
     val partialFor: MemberMonthStatus? = null,
     val error: String? = null,
@@ -40,7 +39,6 @@ class AdminBillingViewModel @Inject constructor(
     }
 
     fun setMonth(month: String) { _s.update { it.copy(month = month) }; refresh() }
-    fun setCategory(cat: String) { _s.update { it.copy(category = cat) }; refresh() }
     fun openPartial(row: MemberMonthStatus?) = _s.update { it.copy(partialFor = row) }
     fun consumeMessage() = _s.update { it.copy(message = null) }
 
@@ -48,7 +46,7 @@ class AdminBillingViewModel @Inject constructor(
         _s.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
             try {
-                _s.update { it.copy(loading = false, rows = repo.membersSummary(_s.value.month, _s.value.category)) }
+                _s.update { it.copy(loading = false, rows = repo.membersSummary(_s.value.month)) }
             } catch (e: Throwable) {
                 _s.update { it.copy(loading = false, error = e.message ?: "Failed to load") }
             }
@@ -59,7 +57,7 @@ class AdminBillingViewModel @Inject constructor(
         _s.update { it.copy(updatingTenantId = row.tenantId, error = null) }
         viewModelScope.launch {
             try {
-                repo.setStatus(row.tenantId, _s.value.month, status, category = _s.value.category, paidAmount = paidAmount)
+                repo.setStatus(row.tenantId, _s.value.month, status, category = "all", paidAmount = paidAmount)
                 refreshEvents.notifyBillsChanged()
                 _s.update { it.copy(updatingTenantId = null, partialFor = null) }
                 refresh()

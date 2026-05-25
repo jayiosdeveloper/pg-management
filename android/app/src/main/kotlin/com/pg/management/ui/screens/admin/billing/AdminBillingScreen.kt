@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Person
@@ -76,9 +77,25 @@ fun AdminBillingScreen(
     Scaffold(containerColor = Color.Transparent) { padding ->
         Column(Modifier.fillMaxSize().systemBarsPadding().padding(padding).padding(horizontal = 16.dp)) {
             Spacer(Modifier.height(12.dp))
-            Text("Bills", color = Color.White, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold))
-            Spacer(Modifier.height(8.dp))
-            CategoryToggle(category = s.category, onChange = vm::setCategory, onOpenElectricity = onOpenElectricity)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Bills",
+                    color = Color.White,
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
+                    modifier = Modifier.weight(1f),
+                )
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(BrandCyan.copy(alpha = 0.15f))
+                        .clickable(onClick = onOpenElectricity)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Outlined.Bolt, null, tint = BrandCyan, modifier = Modifier.size(16.dp))
+                    Text("  Electricity", color = BrandCyan, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                }
+            }
             Spacer(Modifier.height(8.dp))
             MonthPicker(s.month, onChange = vm::setMonth)
             Spacer(Modifier.height(8.dp))
@@ -105,38 +122,6 @@ fun AdminBillingScreen(
 }
 
 @Composable
-private fun CategoryToggle(category: String, onChange: (String) -> Unit, onOpenElectricity: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color.White.copy(alpha = 0.06f))
-                .padding(4.dp),
-        ) {
-            listOf("rent" to "Rent", "electricity" to "Electricity").forEach { (key, label) ->
-                val selected = category == key
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (selected) BrandCyan.copy(alpha = 0.18f) else Color.Transparent)
-                        .clickable(onClick = { onChange(key) })
-                        .padding(vertical = 10.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(label, color = if (selected) BrandCyan else Slate200, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-        }
-        if (category == "electricity") {
-            Spacer(Modifier.height(0.dp))
-            TextButton(onClick = onOpenElectricity) { Text("+ Reading", color = BrandCyan, fontWeight = FontWeight.SemiBold) }
-        }
-    }
-}
-
-@Composable
 private fun MonthPicker(month: String, onChange: (String) -> Unit) {
     val ym = remember(month) { runCatching { YearMonth.parse(month) }.getOrDefault(YearMonth.now()) }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -156,9 +141,8 @@ private fun SummaryBar(rows: List<MemberMonthStatus>) {
     val paid = rows.count { it.status == "paid" }
     val partial = rows.count { it.status == "partial" }
     val unpaid = rows.count { it.status == "unpaid" || it.status == "unbilled" || it.status == "overdue" }
-    val collected = rows.sumOf { it.amountPaid }
-    val expected = rows.sumOf { if (it.amount > 0) it.amount else it.monthlyRent }
-    val pending = (expected - collected).coerceAtLeast(0.0)
+    val collected = rows.sumOf { it.totalPaid }
+    val pending = rows.sumOf { it.totalPending }
 
     GlassCard(modifier = Modifier.fillMaxWidth(), padding = PaddingValues(14.dp)) {
         Row(Modifier.fillMaxWidth()) {
@@ -192,9 +176,23 @@ private fun MemberRow(row: MemberMonthStatus, busy: Boolean, vm: AdminBillingVie
             title = { Text(row.fullName, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text("Choose payment status for this month:", color = Slate200, style = MaterialTheme.typography.bodySmall)
-                    Spacer(Modifier.height(4.dp))
-                    Text("Rent: ₹%.0f".format(if (row.amount > 0) row.amount else row.monthlyRent), color = Slate400, style = MaterialTheme.typography.bodySmall)
+                    if (row.bills.isNotEmpty()) {
+                        row.bills.forEach { b ->
+                            Text(
+                                "${b.category.replaceFirstChar { it.uppercase() }}: ₹%.0f (paid ₹%.0f)".format(b.amount, b.amountPaid),
+                                color = Slate200, style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                        Spacer(Modifier.height(6.dp))
+                    } else if (row.monthlyRent > 0) {
+                        Text("Rent (will be billed): ₹%.0f".format(row.monthlyRent), color = Slate200, style = MaterialTheme.typography.bodySmall)
+                        Spacer(Modifier.height(6.dp))
+                    }
+                    val totalDisplay = if (row.totalAmount > 0) row.totalAmount else row.monthlyRent
+                    Text(
+                        "Total: ₹%.0f · Paid: ₹%.0f · Pending: ₹%.0f".format(totalDisplay, row.totalPaid, (totalDisplay - row.totalPaid).coerceAtLeast(0.0)),
+                        color = Color.White, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
+                    )
                 }
             },
             confirmButton = {
@@ -231,9 +229,17 @@ private fun MemberRow(row: MemberMonthStatus, busy: Boolean, vm: AdminBillingVie
                 },
                 color = Slate400, style = MaterialTheme.typography.bodySmall,
             )
+            // Breakdown: "Rent ₹5000 + Electricity ₹2385"
+            val breakdown = row.bills.joinToString(" + ") { "${it.category.replaceFirstChar { c -> c.uppercase() }} ₹${"%.0f".format(it.amount)}" }
+            if (breakdown.isNotEmpty()) {
+                Text(breakdown, color = Slate200, style = MaterialTheme.typography.bodySmall)
+            } else if (row.monthlyRent > 0) {
+                Text("Rent ₹${"%.0f".format(row.monthlyRent)} (not billed yet)", color = Slate400, style = MaterialTheme.typography.bodySmall)
+            }
+            val totalDisplay = if (row.totalAmount > 0) row.totalAmount else row.monthlyRent
             Text(
-                "₹%.0f / ₹%.0f".format(row.amountPaid, if (row.amount > 0) row.amount else row.monthlyRent),
-                color = Slate200, style = MaterialTheme.typography.bodySmall,
+                "₹%.0f / ₹%.0f".format(row.totalPaid, totalDisplay),
+                color = Color.White, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
             )
         }
         if (busy) CircularProgressIndicator(color = BrandCyan, strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
@@ -258,22 +264,28 @@ private fun StatusBadge(status: String) {
 @Composable
 private fun PartialAmountDialog(row: MemberMonthStatus, error: String?, onDismiss: () -> Unit, onSubmit: (Double) -> Unit) {
     var amount by remember { mutableStateOf("") }
-    val total = if (row.amount > 0) row.amount else row.monthlyRent
+    val total = if (row.totalAmount > 0) row.totalAmount else row.monthlyRent
+    val pending = (total - row.totalPaid).coerceAtLeast(0.0)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Partial payment", fontWeight = FontWeight.Bold) },
         text = {
             Column {
-                Text("${row.fullName} · Total ₹%.0f. Enter how much they've paid (less than total).".format(total), color = Slate200, style = MaterialTheme.typography.bodySmall)
+                Text("${row.fullName}", color = Color.White, fontWeight = FontWeight.SemiBold)
+                Text("Total ₹%.0f · Paid so far ₹%.0f · Pending ₹%.0f".format(total, row.totalPaid, pending), color = Slate200, style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it.filter { ch -> ch.isDigit() || ch == '.' } },
-                    label = { Text("Amount paid") },
+                    label = { Text("Amount received now") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = RoundedCornerShape(10.dp),
                     colors = textFieldColors(),
+                )
+                Text(
+                    "This adds a new payment on top of what's already recorded.",
+                    color = Slate400, style = MaterialTheme.typography.bodySmall,
                 )
                 if (error != null) Text(error, color = Danger, style = MaterialTheme.typography.bodySmall)
             }

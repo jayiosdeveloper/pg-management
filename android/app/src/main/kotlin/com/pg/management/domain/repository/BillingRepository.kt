@@ -18,8 +18,8 @@ interface BillingRepository {
     suspend fun listInvoices(tenantId: String? = null): List<Invoice>
     suspend fun generateInvoice(tenantId: String, billingMonth: String): String?
 
-    suspend fun membersSummary(billingMonth: String, category: String = "rent"): List<MemberMonthStatus>
-    suspend fun setStatus(tenantId: String, billingMonth: String, status: String, category: String = "rent", amount: Double? = null, paidAmount: Double? = null)
+    suspend fun membersSummary(billingMonth: String): List<MemberMonthStatus>
+    suspend fun setStatus(tenantId: String, billingMonth: String, status: String, category: String = "all", amount: Double? = null, paidAmount: Double? = null)
 }
 
 data class BillInput(

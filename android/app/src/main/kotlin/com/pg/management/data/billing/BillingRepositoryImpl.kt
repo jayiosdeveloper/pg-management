@@ -89,8 +89,8 @@ class BillingRepositoryImpl @Inject constructor(
     override suspend fun generateInvoice(tenantId: String, billingMonth: String): String? =
         safeCall(moshi) { api.generateInvoice(GenerateInvoiceRequest(tenantId, billingMonth)) }.pdfUrl
 
-    override suspend fun membersSummary(billingMonth: String, category: String): List<com.pg.management.domain.model.MemberMonthStatus> =
-        safeCall(moshi) { api.membersSummary(billingMonth, category) }.map { row ->
+    override suspend fun membersSummary(billingMonth: String): List<com.pg.management.domain.model.MemberMonthStatus> =
+        safeCall(moshi) { api.membersSummary(billingMonth) }.map { row ->
             com.pg.management.domain.model.MemberMonthStatus(
                 tenantId = row.tenantId,
                 fullName = row.user?.fullName.orEmpty(),
@@ -99,9 +99,12 @@ class BillingRepositoryImpl @Inject constructor(
                 roomNumber = row.room?.roomNumber,
                 bedLabel = row.bed?.bedLabel,
                 monthlyRent = row.monthlyRent,
-                billId = row.bill?.id,
-                amount = row.amount,
-                amountPaid = row.amountPaid,
+                bills = row.bills.map { b ->
+                    com.pg.management.domain.model.MemberBillLine(b.id, b.category, b.amount, b.amountPaid, b.status, b.description)
+                },
+                totalAmount = row.totalAmount,
+                totalPaid = row.totalPaid,
+                totalPending = row.totalPending,
                 status = row.status,
             )
         }

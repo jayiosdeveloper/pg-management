@@ -209,7 +209,12 @@ const summary = async (currentUser) => {
  * Member-list summary for a given month: every active member with their
  * rent bill status. Powers the simple "Bills" tab on the admin app.
  */
-const membersSummary = async ({ billing_month, category = 'rent' }) => {
+/**
+ * Combined summary: each active member with the full breakdown of all bills
+ * (rent + electricity + …) for the month, plus totals and a combined status
+ * derived from the sum across categories.
+ */
+const membersSummary = async ({ billing_month }) => {
   const monthDate = `${billing_month}-01`;
   const { data: tenants } = await supabase
     .from('tenants')
@@ -227,27 +232,43 @@ const membersSummary = async ({ billing_month, category = 'rent' }) => {
   if (tenantIds.length > 0) {
     const { data: bills } = await supabase
       .from('bills')
-      .select('id, tenant_id, amount, amount_paid, status')
-      .eq('category', category)
+      .select('id, tenant_id, category, amount, amount_paid, status, description')
       .eq('billing_month', monthDate)
-      .in('tenant_id', tenantIds);
-    for (const b of bills || []) billsByTenant.set(b.tenant_id, b);
+      .in('tenant_id', tenantIds)
+      .order('category');
+    for (const b of bills || []) {
+      const arr = billsByTenant.get(b.tenant_id) || [];
+      arr.push(b);
+      billsByTenant.set(b.tenant_id, arr);
+    }
   }
 
   return (tenants || []).map((t) => {
-    const bill = billsByTenant.get(t.id) || null;
+    const bills = billsByTenant.get(t.id) || [];
     const monthlyRent = Number(t.monthly_rent ?? 0);
-    const defaultAmount = category === 'rent' ? monthlyRent : 0;
+    const total = bills.reduce((sum, b) => sum + Number(b.amount), 0);
+    const paid = bills.reduce((sum, b) => sum + Number(b.amount_paid), 0);
+    const expectedTotal = total > 0 ? total : monthlyRent;
+    const pending = Math.max(0, expectedTotal - paid);
+
+    let combinedStatus = 'unbilled';
+    if (bills.length === 0) combinedStatus = 'unbilled';
+    else if (paid <= 0) combinedStatus = bills.some((b) => b.status === 'overdue') ? 'overdue' : 'unpaid';
+    else if (pending <= 0.001) combinedStatus = 'paid';
+    else combinedStatus = 'partial';
+
     return {
       tenant_id: t.id,
       user: t.user || null,
       room: t.room || null,
       bed: t.bed || null,
       monthly_rent: monthlyRent,
-      bill,
-      status: bill?.status ?? 'unbilled',
-      amount: Number(bill?.amount ?? defaultAmount),
-      amount_paid: Number(bill?.amount_paid ?? 0),
+      bills,
+      total_amount: total,
+      total_paid: paid,
+      total_pending: pending,
+      expected_total: expectedTotal,
+      status: combinedStatus,
     };
   });
 };
@@ -267,7 +288,20 @@ const membersSummary = async ({ billing_month, category = 'rent' }) => {
  *                (capped at the bill total).
  *   - "unpaid":  deletes every payment row for the bill and resets amount_paid.
  */
-const setStatus = async ({ tenant_id, billing_month, status, category = 'rent', amount, paid_amount }, recordedBy) => {
+const setStatus = async ({ tenant_id, billing_month, status, category = 'all', amount, paid_amount }, recordedBy) => {
+  if (category === 'all') {
+    return await setStatusCombined({ tenant_id, billing_month, status, paid_amount }, recordedBy);
+  }
+  return await setStatusSingle({ tenant_id, billing_month, status, category, amount, paid_amount }, recordedBy);
+};
+
+/**
+ * Combined / waterfall mode for the Bills tab. Treats every bill the member
+ * has for the month as one running total. Partial payments are applied to the
+ * oldest unpaid bill first (rent before electricity, alphabetically by
+ * category for stability).
+ */
+const setStatusCombined = async ({ tenant_id, billing_month, status, paid_amount }, recordedBy) => {
   const monthDate = `${billing_month}-01`;
 
   const { data: tenant } = await supabase
@@ -275,11 +309,92 @@ const setStatus = async ({ tenant_id, billing_month, status, category = 'rent', 
     .eq('id', tenant_id).maybeSingle();
   if (!tenant) throw NotFound('Member not found');
 
-  // Default amount for new bills:
-  //   - rent: tenant's monthly_rent (or room's)
-  //   - other categories: must be set on the bill already (electricity bills
-  //     are created by /electricity); if there's no existing bill we can't
-  //     guess an amount, so refuse.
+  // Load every bill for this member + month
+  let { data: bills } = await supabase
+    .from('bills').select('*')
+    .eq('tenant_id', tenant_id).eq('billing_month', monthDate);
+  bills = bills || [];
+
+  // Make sure a rent bill exists too when we're settling money in, so the
+  // combined view always covers rent + any side categories.
+  if (status !== 'unpaid') {
+    const hasRent = bills.some((b) => b.category === 'rent');
+    const rentDefault = Number(tenant.monthly_rent ?? tenant.room?.monthly_rent ?? 0);
+    if (!hasRent && rentDefault > 0) {
+      const { data: inserted } = await supabase.from('bills').insert({
+        tenant_id, category: 'rent', amount: rentDefault,
+        billing_month: monthDate, due_date: `${billing_month}-10`, description: 'Monthly rent',
+      }).select('*').single();
+      if (inserted) bills.push(inserted);
+    }
+  }
+  if (bills.length === 0) {
+    throw BadRequest('No bills to settle and no monthly rent on file');
+  }
+
+  // Stable order: rent first, then alphabetical (so partial waterfall is deterministic)
+  bills.sort((a, b) => (a.category === 'rent' ? -1 : b.category === 'rent' ? 1 : a.category.localeCompare(b.category)));
+
+  const nowIso = new Date().toISOString();
+
+  if (status === 'unpaid') {
+    // Wipe payments for all bills this month and reset
+    for (const b of bills) {
+      await supabase.from('payments').delete().eq('bill_id', b.id);
+      await supabase.from('bills').update({ amount_paid: 0 }).eq('id', b.id);
+    }
+    return { tenant_id, billing_month: monthDate, status: 'unpaid' };
+  }
+
+  if (status === 'paid') {
+    // For every bill with remaining balance, log a payment for the remainder
+    for (const b of bills) {
+      const remaining = Number(b.amount) - Number(b.amount_paid);
+      if (remaining > 0.001) {
+        await supabase.from('payments').insert({
+          bill_id: b.id, tenant_id, amount: remaining,
+          method: 'cash', paid_at: nowIso,
+          notes: 'Marked fully paid by admin',
+          recorded_by: recordedBy?.id || null,
+        });
+        await supabase.from('bills').update({ amount_paid: Number(b.amount) }).eq('id', b.id);
+      }
+    }
+    return { tenant_id, billing_month: monthDate, status: 'paid' };
+  }
+
+  // status === 'partial'
+  let remainingInc = Number(paid_amount ?? 0);
+  if (remainingInc <= 0) throw BadRequest('Partial amount must be greater than 0');
+
+  for (const b of bills) {
+    if (remainingInc <= 0.001) break;
+    const billRemaining = Number(b.amount) - Number(b.amount_paid);
+    if (billRemaining <= 0.001) continue;
+    const take = Math.min(remainingInc, billRemaining);
+    await supabase.from('payments').insert({
+      bill_id: b.id, tenant_id, amount: take,
+      method: 'cash', paid_at: nowIso,
+      notes: 'Partial payment recorded by admin',
+      recorded_by: recordedBy?.id || null,
+    });
+    await supabase.from('bills').update({ amount_paid: Number(b.amount_paid) + take }).eq('id', b.id);
+    remainingInc -= take;
+  }
+  if (remainingInc > 0.001) {
+    throw BadRequest('Payment exceeds total remaining due across bills');
+  }
+  return { tenant_id, billing_month: monthDate, status: 'partial' };
+};
+
+const setStatusSingle = async ({ tenant_id, billing_month, status, category, amount, paid_amount }, recordedBy) => {
+  const monthDate = `${billing_month}-01`;
+
+  const { data: tenant } = await supabase
+    .from('tenants').select('id, monthly_rent, room:rooms(monthly_rent)')
+    .eq('id', tenant_id).maybeSingle();
+  if (!tenant) throw NotFound('Member not found');
+
   const rentDefault = Number(amount ?? tenant.monthly_rent ?? tenant.room?.monthly_rent ?? 0);
 
   const { data: existing } = await supabase
@@ -314,8 +429,7 @@ const setStatus = async ({ tenant_id, billing_month, status, category = 'rent', 
     if (remaining > 0.001) {
       await supabase.from('payments').insert({
         bill_id: billId, tenant_id, amount: remaining,
-        method: 'cash', paid_at: nowIso,
-        notes: 'Marked fully paid by admin',
+        method: 'cash', paid_at: nowIso, notes: 'Marked fully paid by admin',
         recorded_by: recordedBy?.id || null,
       });
       newAmountPaid = billAmount;
@@ -327,8 +441,7 @@ const setStatus = async ({ tenant_id, billing_month, status, category = 'rent', 
     if (cappedInc <= 0) throw BadRequest('Bill is already fully paid');
     await supabase.from('payments').insert({
       bill_id: billId, tenant_id, amount: cappedInc,
-      method: 'cash', paid_at: nowIso,
-      notes: 'Partial payment recorded by admin',
+      method: 'cash', paid_at: nowIso, notes: 'Partial payment recorded by admin',
       recorded_by: recordedBy?.id || null,
     });
     newAmountPaid = currentPaid + cappedInc;
@@ -338,11 +451,8 @@ const setStatus = async ({ tenant_id, billing_month, status, category = 'rent', 
   }
 
   const { data: updated, error: uerr } = await supabase
-    .from('bills')
-    .update({ amount_paid: newAmountPaid })
-    .eq('id', billId)
-    .select('id, tenant_id, amount, amount_paid, status, billing_month')
-    .single();
+    .from('bills').update({ amount_paid: newAmountPaid }).eq('id', billId)
+    .select('id, tenant_id, amount, amount_paid, status, billing_month').single();
   if (uerr) throw uerr;
   return updated;
 };

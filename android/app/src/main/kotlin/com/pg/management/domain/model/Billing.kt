@@ -47,7 +47,17 @@ data class Invoice(
     val createdAt: String,
 )
 
-/** A member's rent-status for a given month (used by the simple Bills tab). */
+/** One category line on a member's monthly bill (rent, electricity, …). */
+data class MemberBillLine(
+    val id: String,
+    val category: String,
+    val amount: Double,
+    val amountPaid: Double,
+    val status: String,
+    val description: String?,
+)
+
+/** Combined per-member status for the selected month. */
 data class MemberMonthStatus(
     val tenantId: String,
     val fullName: String,
@@ -56,8 +66,9 @@ data class MemberMonthStatus(
     val roomNumber: String?,
     val bedLabel: String?,
     val monthlyRent: Double,
-    val billId: String?,
-    val amount: Double,
-    val amountPaid: Double,
+    val bills: List<MemberBillLine>,
+    val totalAmount: Double,
+    val totalPaid: Double,
+    val totalPending: Double,
     val status: String,    // "unbilled" | "unpaid" | "partial" | "paid" | "overdue"
 )
