@@ -218,22 +218,43 @@ const update = async (id, input) => {
 const remove = async (id) => {
   const existing = await getById(id);
 
-  // Free bed
+  // Best-effort: free bed (don't let this block delete)
   if (existing.bed_id) {
-    await supabase.from('beds').update({ status: 'vacant' }).eq('id', existing.bed_id);
+    try {
+      await supabase.from('beds').update({ status: 'vacant' }).eq('id', existing.bed_id);
+    } catch (_) { /* tolerate */ }
   }
 
-  // Best-effort cleanup of uploaded images
+  // Best-effort: clean up Cloudinary assets
   for (const url of [existing.photo_url, existing.aadhaar_front_url, existing.aadhaar_back_url]) {
-    const pid = publicIdFromUrl(url);
-    if (pid) await destroy(pid);
+    try {
+      const pid = publicIdFromUrl(url);
+      if (pid) await destroy(pid);
+    } catch (_) { /* tolerate */ }
   }
 
-  // Deleting the user cascades to tenant row via FK
-  const { error } = await supabase.from('users').delete().eq('id', existing.user_id);
-  if (error) throw error;
+  // Best-effort: null out FK columns on related rows that don't cascade (so the
+  // user delete never gets blocked by referential integrity)
+  try {
+    await supabase.from('payments').update({ recorded_by: null }).eq('recorded_by', existing.user_id);
+    await supabase.from('visitor_logs').update({ recorded_by: null }).eq('recorded_by', existing.user_id);
+    await supabase.from('invoices').update({ generated_by: null }).eq('generated_by', existing.user_id);
+  } catch (_) { /* tolerate */ }
 
-  if (existing.room_id) await refreshRoomStatus(existing.room_id);
+  // Deleting the user cascades to tenant row via FK (and from there to bills,
+  // payments, complaints, etc. via on delete cascade).
+  const { error } = await supabase.from('users').delete().eq('id', existing.user_id);
+  if (error) {
+    // Translate the obscure Postgres FK message into something the admin can act on
+    if (error.code === '23503' || (error.message || '').toLowerCase().includes('foreign key')) {
+      throw Conflict('Cannot delete this member because some records still reference them. Please contact support.');
+    }
+    throw error;
+  }
+
+  if (existing.room_id) {
+    try { await refreshRoomStatus(existing.room_id); } catch (_) { /* tolerate */ }
+  }
   return { id };
 };
 
