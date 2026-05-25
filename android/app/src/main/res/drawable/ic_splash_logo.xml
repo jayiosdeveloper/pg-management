@@ -1,16 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  PG Management — splash & login brand icon
+  Modern apartment building with lit windows: peaked roof, multi-room facade.
+  Used standalone on the dark splash background, so it carries its own
+  hex frame.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
+    <!-- Outer hex (cyan glow ring) -->
     <path
         android:fillColor="#22D3EE"
-        android:pathData="M54,18 L84,36 L84,72 L54,90 L24,72 L24,36 Z" />
+        android:pathData="M54,6 L98,30 L98,78 L54,102 L10,78 L10,30 Z" />
+
+    <!-- Inner hex (deep navy plate) -->
     <path
-        android:fillColor="#3B5BFF"
-        android:pathData="M54,30 L72,40 L72,68 L54,78 L36,68 L36,40 Z" />
+        android:fillColor="#0B1437"
+        android:pathData="M54,15 L89,33.5 L89,74.5 L54,93 L19,74.5 L19,33.5 Z" />
+
+    <!-- Roof (white peak) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M44,46 L44,68 L50,68 L50,60 L58,60 C62,60 65,57 65,53 C65,49 62,46 58,46 Z M50,52 L58,52 C59,52 60,52.5 60,53 C60,53.5 59,54 58,54 L50,54 Z" />
+        android:pathData="M54,27 L79,48 L29,48 Z" />
+
+    <!-- Building body (white) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M33,48 L75,48 L75,84 L33,84 Z" />
+
+    <!-- Roof accent line -->
+    <path
+        android:fillColor="#3B5BFF"
+        android:pathData="M54,33 L72,48 L36,48 Z" />
+
+    <!-- Lit windows (cyan glow) — 2x2 grid -->
+    <path
+        android:fillColor="#22D3EE"
+        android:pathData="M39,54 L48,54 L48,62 L39,62 Z" />
+    <path
+        android:fillColor="#22D3EE"
+        android:pathData="M60,54 L69,54 L69,62 L60,62 Z" />
+    <path
+        android:fillColor="#22D3EE"
+        android:pathData="M39,66 L48,66 L48,74 L39,74 Z" />
+    <path
+        android:fillColor="#22D3EE"
+        android:pathData="M60,66 L69,66 L69,74 L60,74 Z" />
+
+    <!-- Door (purple-blue arch) -->
+    <path
+        android:fillColor="#7C3AED"
+        android:pathData="M49,76 L59,76 L59,84 L49,84 Z" />
 </vector>
