@@ -6,10 +6,10 @@ router.get('/health', (req, res) => {
 });
 
 router.use('/auth', authRoutes);
+router.use('/tenants', require('../modules/tenant/tenant.routes'));
+router.use('/rooms', require('../modules/room/room.routes'));
 
 // Other module routers will be mounted here in later phases:
-// router.use('/tenants', require('../modules/tenant/tenant.routes'));
-// router.use('/rooms', require('../modules/room/room.routes'));
 // router.use('/bills', require('../modules/billing/billing.routes'));
 // router.use('/payments', require('../modules/payment/payment.routes'));
 // router.use('/notifications', require('../modules/notification/notification.routes'));
