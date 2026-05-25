@@ -8,8 +8,14 @@ router.get('/health', (req, res) => {
 router.use('/auth', authRoutes);
 router.use('/tenants', require('../modules/tenant/tenant.routes'));
 router.use('/rooms', require('../modules/room/room.routes'));
+router.use('/bills', require('../modules/billing/billing.routes'));
+router.use('/invoices', require('../modules/pdf/pdf.routes'));
+router.use('/notifications', require('../modules/notification/notification.routes'));
+router.use('/complaints', require('../modules/complaint/complaint.routes'));
+router.use('/visitors', require('../modules/visitor/visitor.routes'));
+router.use('/analytics', require('../modules/analytics/analytics.routes'));
 
-// Other module routers will be mounted here in later phases:
+// Future modules will be mounted here
 // router.use('/bills', require('../modules/billing/billing.routes'));
 // router.use('/payments', require('../modules/payment/payment.routes'));
 // router.use('/notifications', require('../modules/notification/notification.routes'));

@@ -4,6 +4,8 @@ import com.pg.management.BuildConfig
 import com.pg.management.data.auth.remote.AuthApi
 import com.pg.management.data.common.AuthInterceptor
 import com.pg.management.data.common.TokenAuthenticator
+import com.pg.management.data.room.remote.RoomApi
+import com.pg.management.data.tenant.remote.TenantApi
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Module
@@ -56,4 +58,12 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideAuthApi(retrofit: Retrofit): AuthApi = retrofit.create(AuthApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideTenantApi(retrofit: Retrofit): TenantApi = retrofit.create(TenantApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideRoomApi(retrofit: Retrofit): RoomApi = retrofit.create(RoomApi::class.java)
 }

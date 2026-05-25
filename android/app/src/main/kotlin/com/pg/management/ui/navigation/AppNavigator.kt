@@ -5,10 +5,15 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.pg.management.ui.screens.admin.AdminHomeScreen
+import androidx.navigation.navArgument
+import com.pg.management.ui.screens.admin.AdminShellScreen
+import com.pg.management.ui.screens.admin.rooms.RoomFormScreen
+import com.pg.management.ui.screens.admin.tenants.TenantDetailScreen
+import com.pg.management.ui.screens.admin.tenants.TenantFormScreen
 import com.pg.management.ui.screens.forgot.ForgotPasswordScreen
 import com.pg.management.ui.screens.login.LoginScreen
 import com.pg.management.ui.screens.tenant.TenantHomeScreen
@@ -28,39 +33,65 @@ fun AppNavigator(startDestination: String) {
         composable(Routes.LOGIN) {
             LoginScreen(
                 onLoggedInAsAdmin = {
-                    nav.navigate(Routes.ADMIN_HOME) {
-                        popUpTo(Routes.LOGIN) { inclusive = true }
-                    }
+                    nav.navigate(Routes.ADMIN_HOME) { popUpTo(Routes.LOGIN) { inclusive = true } }
                 },
                 onLoggedInAsTenant = {
-                    nav.navigate(Routes.TENANT_HOME) {
-                        popUpTo(Routes.LOGIN) { inclusive = true }
-                    }
+                    nav.navigate(Routes.TENANT_HOME) { popUpTo(Routes.LOGIN) { inclusive = true } }
                 },
                 onForgotPassword = { nav.navigate(Routes.FORGOT) },
             )
         }
-
-        composable(Routes.FORGOT) {
-            ForgotPasswordScreen(onBack = { nav.popBackStack() })
-        }
+        composable(Routes.FORGOT) { ForgotPasswordScreen(onBack = { nav.popBackStack() }) }
 
         composable(Routes.ADMIN_HOME) {
-            AdminHomeScreen(
+            AdminShellScreen(
                 onLogout = {
-                    nav.navigate(Routes.LOGIN) {
-                        popUpTo(Routes.ADMIN_HOME) { inclusive = true }
-                    }
+                    nav.navigate(Routes.LOGIN) { popUpTo(Routes.ADMIN_HOME) { inclusive = true } }
+                },
+                onOpenTenantDetail = { id -> nav.navigate(Routes.tenantDetail(id)) },
+                onAddTenant = { nav.navigate(Routes.tenantForm()) },
+                onOpenRoomDetail = { id -> nav.navigate(Routes.roomForm(id)) },
+                onAddRoom = { nav.navigate(Routes.roomForm()) },
+            )
+        }
+
+        composable(
+            route = Routes.TENANT_FORM,
+            arguments = listOf(navArgument("tenantId") { type = NavType.StringType; defaultValue = "" }),
+        ) { backStack ->
+            val raw = backStack.arguments?.getString("tenantId").orEmpty()
+            // Hilt's SavedStateHandle picks up the arg automatically via the route
+            TenantFormScreen(
+                onBack = { nav.popBackStack() },
+                onSaved = { tenantId ->
+                    nav.popBackStack()
+                    if (raw.isEmpty()) nav.navigate(Routes.tenantDetail(tenantId))
                 },
             )
+        }
+
+        composable(
+            route = Routes.TENANT_DETAIL,
+            arguments = listOf(navArgument("tenantId") { type = NavType.StringType }),
+        ) {
+            TenantDetailScreen(
+                onBack = { nav.popBackStack() },
+                onEdit = { id -> nav.navigate(Routes.tenantForm(id)) },
+                onDeleted = { nav.popBackStack() },
+            )
+        }
+
+        composable(
+            route = Routes.ROOM_FORM,
+            arguments = listOf(navArgument("roomId") { type = NavType.StringType; defaultValue = "" }),
+        ) {
+            RoomFormScreen(onBack = { nav.popBackStack() }, onSaved = { nav.popBackStack() })
         }
 
         composable(Routes.TENANT_HOME) {
             TenantHomeScreen(
                 onLogout = {
-                    nav.navigate(Routes.LOGIN) {
-                        popUpTo(Routes.TENANT_HOME) { inclusive = true }
-                    }
+                    nav.navigate(Routes.LOGIN) { popUpTo(Routes.TENANT_HOME) { inclusive = true } }
                 },
             )
         }
