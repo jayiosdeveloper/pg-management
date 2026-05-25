@@ -75,7 +75,7 @@ fun TenantsListScreen(
                 containerColor = BrandPrimary,
                 contentColor = Color.White,
                 icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
-                text = { Text("Add Tenant", fontWeight = FontWeight.SemiBold) },
+                text = { Text("Add Member", fontWeight = FontWeight.SemiBold) },
             )
         },
     ) { padding ->
@@ -87,7 +87,7 @@ fun TenantsListScreen(
                 .padding(horizontal = 16.dp),
         ) {
             Spacer(Modifier.height(12.dp))
-            Text("Tenants", color = Color.White, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold))
+            Text("Members", color = Color.White, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold))
             Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
@@ -126,7 +126,7 @@ fun TenantsListScreen(
                     }
                 }
                 s.tenants.isEmpty() && s.error == null -> {
-                    EmptyState("No tenants yet. Tap '+ Add Tenant' to create the first one.")
+                    EmptyState("No members yet. Tap '+ Add Member' to create the first one.")
                 }
                 s.error != null -> EmptyState(s.error!!, isError = true)
                 else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -218,15 +218,3 @@ private fun EmptyState(message: String, isError: Boolean = false) {
     }
 }
 
-@Composable
-internal fun textFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = Color.White,
-    unfocusedTextColor = Color.White,
-    focusedBorderColor = BrandCyan,
-    unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
-    focusedLabelColor = BrandCyan,
-    unfocusedLabelColor = Slate400,
-    cursorColor = BrandCyan,
-    focusedContainerColor = Color.White.copy(alpha = 0.04f),
-    unfocusedContainerColor = Color.White.copy(alpha = 0.04f),
-)

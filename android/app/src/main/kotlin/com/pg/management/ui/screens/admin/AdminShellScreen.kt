@@ -50,7 +50,7 @@ fun AdminShellScreen(
     val tabs = remember {
         listOf(
             AdminTab("Home", Icons.Outlined.Dashboard),
-            AdminTab("Tenants", Icons.Outlined.People),
+            AdminTab("Members", Icons.Outlined.People),
             AdminTab("Rooms", Icons.Outlined.Apartment),
             AdminTab("Bills", Icons.Outlined.Payments),
             AdminTab("More", Icons.Outlined.MoreHoriz),

@@ -76,8 +76,8 @@ fun TenantDetailScreen(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Delete tenant?", fontWeight = FontWeight.Bold) },
-            text = { Text("This permanently deletes the tenant, their login, and uploaded documents. This cannot be undone.") },
+            title = { Text("Delete member?", fontWeight = FontWeight.Bold) },
+            text = { Text("This permanently deletes the member, their login, and uploaded documents. This cannot be undone.") },
             confirmButton = {
                 TextButton(onClick = { confirmDelete = false; vm.delete() }) { Text("Delete", color = Danger) }
             },
@@ -90,7 +90,7 @@ fun TenantDetailScreen(
             containerColor = Color.Transparent,
             topBar = {
                 CenterAlignedTopAppBar(
-                    title = { Text("Tenant", color = Color.White) },
+                    title = { Text("Member", color = Color.White) },
                     navigationIcon = {
                         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null, tint = Color.White) }
                     },

@@ -1,5 +1,6 @@
 package com.pg.management.ui.screens.admin.tenants
 
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,14 +19,14 @@ import java.time.LocalDate
 import javax.inject.Inject
 
 data class TenantFormUi(
-    val tenantId: String? = null,        // null = create
+    val tenantId: String? = null,                // null = create
     val loading: Boolean = false,
     val saving: Boolean = false,
     val rooms: List<Room> = emptyList(),
     val fullName: String = "",
     val email: String = "",
     val phone: String = "",
-    val gender: String = "",
+    val gender: String = "",                     // "" | "Male" | "Female" | "Other"
     val city: String = "",
     val state: String = "",
     val address: String = "",
@@ -34,6 +35,13 @@ data class TenantFormUi(
     val occupation: String = "",
     val idProofType: String = "aadhaar",
     val idProofNumber: String = "",
+    val aadhaarWasSet: Boolean = false,          // existing Aadhaar number, read-only
+    val photoUrl: String? = null,
+    val aadhaarFrontUrl: String? = null,
+    val aadhaarBackUrl: String? = null,
+    val uploadingPhoto: Boolean = false,
+    val uploadingAadhaarFront: Boolean = false,
+    val uploadingAadhaarBack: Boolean = false,
     val roomId: String? = null,
     val bedId: String? = null,
     val joiningDate: String = LocalDate.now().toString(),
@@ -44,7 +52,11 @@ data class TenantFormUi(
     val savedCredentials: TenantCredentials? = null,
     val savedTenantId: String? = null,
 ) {
-    val canSubmit: Boolean get() = fullName.isNotBlank() && joiningDate.isNotBlank() && !saving
+    val canSubmit: Boolean get() =
+        fullName.isNotBlank() &&
+        joiningDate.isNotBlank() &&
+        idProofNumber.isNotBlank() &&            // Aadhaar number is compulsory
+        !saving
 }
 
 @HiltViewModel
@@ -54,22 +66,25 @@ class TenantFormViewModel @Inject constructor(
     savedState: SavedStateHandle,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(TenantFormUi(tenantId = savedState["tenantId"]))
-    val state: StateFlow<TenantFormUi> = _state.asStateFlow()
+    private val _state: MutableStateFlow<TenantFormUi>
+    val state: StateFlow<TenantFormUi>
 
     init {
+        // Treat empty string as null so the "Add Member" flow is not mistaken for "Edit".
+        val rawId: String? = savedState["tenantId"]
+        val initialTenantId = rawId?.takeIf { it.isNotBlank() }
+        _state = MutableStateFlow(TenantFormUi(tenantId = initialTenantId))
+        state = _state.asStateFlow()
         loadRooms()
-        _state.value.tenantId?.let { load(it) }
+        initialTenantId?.let { load(it) }
     }
 
     fun update(transform: (TenantFormUi) -> TenantFormUi) = _state.update(transform)
 
     private fun loadRooms() {
         viewModelScope.launch {
-            try {
-                val r = rooms.list(status = "all")
-                _state.update { it.copy(rooms = r) }
-            } catch (_: Throwable) { /* tolerate missing rooms */ }
+            try { _state.update { it.copy(rooms = rooms.list(status = "all")) } }
+            catch (_: Throwable) { /* tolerate */ }
         }
     }
 
@@ -93,6 +108,10 @@ class TenantFormViewModel @Inject constructor(
                         occupation = t.occupation.orEmpty(),
                         idProofType = t.idProofType ?: "aadhaar",
                         idProofNumber = t.idProofNumber.orEmpty(),
+                        aadhaarWasSet = !t.idProofNumber.isNullOrBlank(),
+                        photoUrl = t.photoUrl,
+                        aadhaarFrontUrl = t.aadhaarFrontUrl,
+                        aadhaarBackUrl = t.aadhaarBackUrl,
                         roomId = t.room?.id,
                         bedId = t.bed?.id,
                         joiningDate = t.joiningDate,
@@ -102,7 +121,7 @@ class TenantFormViewModel @Inject constructor(
                     )
                 }
             } catch (e: Throwable) {
-                _state.update { it.copy(loading = false, error = e.message ?: "Failed to load tenant") }
+                _state.update { it.copy(loading = false, error = e.message ?: "Failed to load") }
             }
         }
     }
@@ -125,7 +144,8 @@ class TenantFormViewModel @Inject constructor(
                     emergencyContactPhone = s.emergencyPhone.trim().ifBlank { null },
                     occupation = s.occupation.trim().ifBlank { null },
                     idProofType = s.idProofType.trim().ifBlank { null },
-                    idProofNumber = s.idProofNumber.trim().ifBlank { null },
+                    // If aadhaar was already set, don't send number (we keep it server-side)
+                    idProofNumber = if (s.aadhaarWasSet) null else s.idProofNumber.trim().ifBlank { null },
                     roomId = s.roomId,
                     bedId = s.bedId,
                     joiningDate = s.joiningDate,
@@ -135,14 +155,54 @@ class TenantFormViewModel @Inject constructor(
                 )
                 if (s.tenantId == null) {
                     val (tenant, creds) = tenants.create(input)
-                    _state.update { it.copy(saving = false, savedCredentials = creds, savedTenantId = tenant.id) }
+                    _state.update { it.copy(saving = false, tenantId = tenant.id, aadhaarWasSet = true, savedCredentials = creds, savedTenantId = tenant.id) }
                 } else {
                     val updated = tenants.update(s.tenantId, input)
-                    _state.update { it.copy(saving = false, savedTenantId = updated.id) }
+                    _state.update { it.copy(saving = false, aadhaarWasSet = !updated.idProofNumber.isNullOrBlank(), savedTenantId = updated.id) }
                 }
             } catch (e: Throwable) {
                 _state.update { it.copy(saving = false, error = e.message ?: "Save failed") }
             }
+        }
+    }
+
+    fun uploadPhoto(uri: Uri) = upload(uri,
+        onStart = { _state.update { it.copy(uploadingPhoto = true, error = null) } },
+        onSuccess = { url -> _state.update { it.copy(uploadingPhoto = false, photoUrl = url) } },
+        onFail = { err -> _state.update { it.copy(uploadingPhoto = false, error = err) } },
+        call = { id, u -> tenants.uploadPhoto(id, u) },
+    )
+
+    fun uploadAadhaarFront(uri: Uri) = upload(uri,
+        onStart = { _state.update { it.copy(uploadingAadhaarFront = true, error = null) } },
+        onSuccess = { url -> _state.update { it.copy(uploadingAadhaarFront = false, aadhaarFrontUrl = url) } },
+        onFail = { err -> _state.update { it.copy(uploadingAadhaarFront = false, error = err) } },
+        call = { id, u -> tenants.uploadAadhaarFront(id, u) },
+    )
+
+    fun uploadAadhaarBack(uri: Uri) = upload(uri,
+        onStart = { _state.update { it.copy(uploadingAadhaarBack = true, error = null) } },
+        onSuccess = { url -> _state.update { it.copy(uploadingAadhaarBack = false, aadhaarBackUrl = url) } },
+        onFail = { err -> _state.update { it.copy(uploadingAadhaarBack = false, error = err) } },
+        call = { id, u -> tenants.uploadAadhaarBack(id, u) },
+    )
+
+    private fun upload(
+        uri: Uri,
+        onStart: () -> Unit,
+        onSuccess: (String) -> Unit,
+        onFail: (String) -> Unit,
+        call: suspend (String, Uri) -> String,
+    ) {
+        val tid = _state.value.tenantId
+        if (tid == null) {
+            onFail("Save the member first to upload photos")
+            return
+        }
+        onStart()
+        viewModelScope.launch {
+            try { onSuccess(call(tid, uri)) }
+            catch (e: Throwable) { onFail(e.message ?: "Upload failed") }
         }
     }
 

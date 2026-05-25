@@ -97,7 +97,7 @@ fun AdminDashboardScreen(
         ) {
             StatCard(
                 modifier = Modifier.weight(1f),
-                title = "Active Tenants",
+                title = "Active Members",
                 value = s.stats.activeTenants.toString(),
                 icon = Icons.Outlined.People,
                 accent = BrandCyan,
