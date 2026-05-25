@@ -255,7 +255,18 @@ const membersSummary = async ({ billing_month }) => {
  * Admin toggle: mark a member's rent for the month as paid / partial / unpaid.
  * Creates the bill if it doesn't exist yet; never errors on idempotent calls.
  */
-const setStatus = async ({ tenant_id, billing_month, status, amount, paid_amount }) => {
+/**
+ * Each admin click also writes a row to `payments` so the member can see every
+ * individual payment event in their My Bills view.
+ *
+ *   - "paid":    if any due remains, creates a payment for (amount - amount_paid)
+ *                and bumps amount_paid up to amount.
+ *   - "partial": paid_amount is the *increment* for this click. A new payment
+ *                row is inserted and amount_paid is bumped by that much
+ *                (capped at the bill total).
+ *   - "unpaid":  deletes every payment row for the bill and resets amount_paid.
+ */
+const setStatus = async ({ tenant_id, billing_month, status, amount, paid_amount }, recordedBy) => {
   const monthDate = `${billing_month}-01`;
 
   const { data: tenant } = await supabase
@@ -271,25 +282,50 @@ const setStatus = async ({ tenant_id, billing_month, status, amount, paid_amount
 
   const dueDate = `${billing_month}-10`;
   let billId = existing?.id;
-  const billAmount = existing?.amount != null ? Number(existing.amount) : defaultAmount;
+  let billAmount = existing?.amount != null ? Number(existing.amount) : defaultAmount;
+  let currentPaid = existing?.amount_paid != null ? Number(existing.amount_paid) : 0;
 
   if (!existing) {
     const { data: inserted, error } = await supabase.from('bills').insert({
       tenant_id, category: 'rent', amount: defaultAmount,
       billing_month: monthDate, due_date: dueDate, description: 'Monthly rent',
-    }).select('id').single();
+    }).select('id, amount, amount_paid').single();
     if (error) throw error;
     billId = inserted.id;
+    billAmount = Number(inserted.amount);
+    currentPaid = Number(inserted.amount_paid);
   }
 
-  const newAmountPaid = (() => {
-    if (status === 'paid') return billAmount;
-    if (status === 'unpaid') return 0;
-    const v = Number(paid_amount ?? 0);
-    if (v <= 0) throw BadRequest('For partial, paid_amount must be > 0');
-    if (v >= billAmount) throw BadRequest('For partial, paid_amount must be less than the bill amount');
-    return v;
-  })();
+  let newAmountPaid = currentPaid;
+  const nowIso = new Date().toISOString();
+
+  if (status === 'paid') {
+    const remaining = billAmount - currentPaid;
+    if (remaining > 0.001) {
+      await supabase.from('payments').insert({
+        bill_id: billId, tenant_id, amount: remaining,
+        method: 'cash', paid_at: nowIso,
+        notes: 'Marked fully paid by admin',
+        recorded_by: recordedBy?.id || null,
+      });
+      newAmountPaid = billAmount;
+    }
+  } else if (status === 'partial') {
+    const inc = Number(paid_amount ?? 0);
+    if (inc <= 0) throw BadRequest('Partial amount must be greater than 0');
+    const cappedInc = Math.min(inc, billAmount - currentPaid);
+    if (cappedInc <= 0) throw BadRequest('Bill is already fully paid');
+    await supabase.from('payments').insert({
+      bill_id: billId, tenant_id, amount: cappedInc,
+      method: 'cash', paid_at: nowIso,
+      notes: 'Partial payment recorded by admin',
+      recorded_by: recordedBy?.id || null,
+    });
+    newAmountPaid = currentPaid + cappedInc;
+  } else if (status === 'unpaid') {
+    await supabase.from('payments').delete().eq('bill_id', billId);
+    newAmountPaid = 0;
+  }
 
   const { data: updated, error: uerr } = await supabase
     .from('bills')

@@ -22,19 +22,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Apartment
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Payments
-import androidx.compose.material.icons.outlined.ReportProblem
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -50,23 +45,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.pg.management.BuildConfig
 import com.pg.management.domain.model.AppNotification
 import com.pg.management.domain.model.Bill
-import com.pg.management.domain.model.Complaint
-import com.pg.management.domain.model.Invoice
 import com.pg.management.domain.model.Payment
 import com.pg.management.ui.components.GlassCard
 import com.pg.management.ui.components.GradientBackground
 import com.pg.management.ui.components.PrimaryButton
-import com.pg.management.ui.screens.admin.tenants.textFieldColors
 import com.pg.management.ui.theme.BrandCyan
-import com.pg.management.ui.theme.BrandPrimary
+import com.pg.management.ui.theme.BrandDeepDarker
 import com.pg.management.ui.theme.Danger
 import com.pg.management.ui.theme.Slate200
 import com.pg.management.ui.theme.Slate400
@@ -86,14 +75,12 @@ fun TenantHomeScreen(
     Scaffold(
         containerColor = Color.Transparent,
         bottomBar = {
-            NavigationBar(containerColor = com.pg.management.ui.theme.BrandDeepDarker.copy(alpha = 0.9f)) {
+            NavigationBar(containerColor = BrandDeepDarker.copy(alpha = 0.9f)) {
                 val tabs = remember {
                     listOf(
                         "Home" to Icons.Outlined.Apartment,
                         "Bills" to Icons.Outlined.Payments,
-                        "Invoices" to Icons.Outlined.Description,
-                        "Notices" to Icons.Outlined.Notifications,
-                        "Issues" to Icons.Outlined.ReportProblem,
+                        "Notifications" to Icons.Outlined.Notifications,
                     )
                 }
                 tabs.forEachIndexed { i, (label, icon) ->
@@ -115,11 +102,9 @@ fun TenantHomeScreen(
         GradientBackground {
             Box(Modifier.padding(padding)) {
                 when (tab) {
-                    0 -> TenantHomeTab(s, vm::logout)
+                    0 -> HomeTab(s, onLogout = vm::logout)
                     1 -> BillsTab(s.bills, s.payments)
-                    2 -> InvoicesTab(s.invoices)
-                    3 -> NoticesTab(s.notifications, vm::markNotifRead, vm::markAllNotifsRead)
-                    4 -> ComplaintsTab(s, vm)
+                    2 -> NoticesTab(s.notifications, vm::markNotifRead, vm::markAllNotifsRead)
                 }
             }
         }
@@ -127,13 +112,9 @@ fun TenantHomeScreen(
 }
 
 @Composable
-private fun TenantHomeTab(s: TenantHomeUi, onLogout: () -> Unit) {
+private fun HomeTab(s: TenantHomeUi, onLogout: () -> Unit) {
     Column(
-        Modifier
-            .fillMaxSize()
-            .systemBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
+        Modifier.fillMaxSize().systemBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp),
     ) {
         Text("Hello,", color = Slate400, style = MaterialTheme.typography.bodyMedium)
         Text(
@@ -157,20 +138,34 @@ private fun TenantHomeTab(s: TenantHomeUi, onLogout: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             StatBox(modifier = Modifier.fillMaxWidth(), title = "Paid this month", value = "₹ %.0f".format(s.summary.paidThisMonth), accent = BrandCyan)
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
+
             GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Text("Recent activity", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("My profile", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(8.dp))
+                InfoLine("Name", s.session?.fullName)
+                InfoLine("User ID", s.session?.userCode)
+                InfoLine("Email", s.session?.email)
+            }
+            Spacer(Modifier.height(12.dp))
+
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Text("Bill overview", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(8.dp))
+                InfoLine("Total bills", s.summary.countBills.toString())
+                InfoLine("Total due", "₹ %.0f".format(s.summary.totalDue))
+                InfoLine("Overdue", "₹ %.0f".format(s.summary.overdue))
+                InfoLine("Paid this month", "₹ %.0f".format(s.summary.paidThisMonth))
+            }
+            Spacer(Modifier.height(12.dp))
+
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Text("Recent payments", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(8.dp))
                 if (s.payments.isEmpty()) {
                     Text("No payments yet.", color = Slate400, style = MaterialTheme.typography.bodySmall)
                 } else {
-                    s.payments.take(5).forEach { p ->
-                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                            Text(p.paidAt.take(10), color = Slate400, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                            Text(p.method.replaceFirstChar { it.uppercase() }, color = Slate200, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                            Text("₹ %.0f".format(p.amount), color = Success, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
+                    s.payments.take(6).forEach { p -> PaymentLine(p) }
                 }
             }
         }
@@ -190,6 +185,24 @@ private fun StatBox(title: String, value: String, accent: Color, modifier: Modif
 }
 
 @Composable
+private fun InfoLine(label: String, value: String?) {
+    if (value.isNullOrBlank()) return
+    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+        Text(label, color = Slate400, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+        Text(value, color = Slate200, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(2f))
+    }
+}
+
+@Composable
+private fun PaymentLine(p: Payment) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+        Text(p.paidAt.take(10), color = Slate400, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1.2f))
+        Text(p.method.replaceFirstChar { it.uppercase() }, color = Slate200, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+        Text("₹ %.0f".format(p.amount), color = Success, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+    }
+}
+
+@Composable
 private fun BillsTab(bills: List<Bill>, payments: List<Payment>) {
     Column(Modifier.fillMaxSize().systemBarsPadding().padding(horizontal = 16.dp)) {
         Spacer(Modifier.height(14.dp))
@@ -201,68 +214,58 @@ private fun BillsTab(bills: List<Bill>, payments: List<Payment>) {
             }
             return
         }
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(bills, key = { it.id }) { b ->
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("${b.category.replaceFirstChar { it.uppercase() }} · ${b.billingMonth.take(7)}", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                            Text("Due ${b.dueDate}", color = Slate400, style = MaterialTheme.typography.bodySmall)
-                            if (!b.description.isNullOrBlank()) Text(b.description, color = Slate200, style = MaterialTheme.typography.bodySmall)
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text("₹ %.0f".format(b.amount), color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            val (label, color) = when (b.status) {
-                                "paid" -> "Paid" to Success
-                                "partial" -> "Partial · ₹%.0f left".format(b.pending) to Warning
-                                "overdue" -> "Overdue" to Danger
-                                else -> "Unpaid" to Slate400
-                            }
-                            Spacer(Modifier.height(2.dp))
-                            Text(label, color = color, style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                }
-            }
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(bills, key = { it.id }) { b -> BillCard(b, payments.filter { it.billId == b.id }) }
             item { Spacer(Modifier.height(20.dp)) }
         }
     }
 }
 
 @Composable
-private fun InvoicesTab(invoices: List<Invoice>) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    Column(Modifier.fillMaxSize().systemBarsPadding().padding(horizontal = 16.dp)) {
-        Spacer(Modifier.height(14.dp))
-        Text("Invoices", color = Color.White, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold))
-        Spacer(Modifier.height(12.dp))
-        if (invoices.isEmpty()) {
-            Box(Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
-                Text("No invoices yet. Admin can generate one from the dashboard.", color = Slate400)
+private fun BillCard(b: Bill, billPayments: List<Payment>) {
+    var expanded by remember { mutableStateOf(billPayments.isNotEmpty()) }
+    GlassCard(modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("${b.category.replaceFirstChar { it.uppercase() }} · ${b.billingMonth.take(7)}", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("Due ${b.dueDate}", color = Slate400, style = MaterialTheme.typography.bodySmall)
             }
-            return
+            Column(horizontalAlignment = Alignment.End) {
+                Text("₹ %.0f".format(b.amount), color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                val (label, color) = when (b.status) {
+                    "paid" -> "Full Paid" to Success
+                    "partial" -> "Partial · ₹%.0f left".format(b.pending) to Warning
+                    "overdue" -> "Overdue" to Danger
+                    else -> "Unpaid" to Danger
+                }
+                Spacer(Modifier.height(2.dp))
+                Box(Modifier.clip(RoundedCornerShape(8.dp)).background(color.copy(alpha = 0.15f)).padding(horizontal = 8.dp, vertical = 4.dp)) {
+                    Text(label, color = color, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                }
+            }
         }
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(invoices, key = { it.id }) { inv ->
-                GlassCard(modifier = Modifier.fillMaxWidth().clickable(enabled = inv.pdfUrl != null) {
-                    inv.pdfUrl?.let { url ->
-                        val i = android.content.Intent(android.content.Intent.ACTION_VIEW, url.toUri())
-                        i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                        context.startActivity(i)
-                    }
-                }) {
-                    Row {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(inv.invoiceNumber, color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                            Text("Month: ${inv.billingMonth.take(7)}", color = Slate400, style = MaterialTheme.typography.bodySmall)
-                            Spacer(Modifier.height(4.dp))
-                            Text("Total ₹%.0f · Paid ₹%.0f · Pending ₹%.0f".format(inv.totalAmount, inv.paidAmount, inv.pendingAmount), color = Slate200, style = MaterialTheme.typography.bodySmall)
-                        }
-                        Text(if (inv.pdfUrl != null) "Open PDF →" else "—", color = BrandCyan, style = MaterialTheme.typography.bodySmall)
+        if (expanded) {
+            Spacer(Modifier.height(10.dp))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.08f)))
+            Spacer(Modifier.height(10.dp))
+            Text("Payments", color = Slate200, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(6.dp))
+            if (billPayments.isEmpty()) {
+                Text("No payments recorded yet.", color = Slate400, style = MaterialTheme.typography.bodySmall)
+            } else {
+                billPayments.sortedBy { it.paidAt }.forEach { p ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Success))
+                        Spacer(Modifier.size(8.dp))
+                        Text(p.paidAt.take(16).replace('T', ' '), color = Slate400, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                        Text(p.method.replaceFirstChar { it.uppercase() }, color = Slate200, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(0.8f))
+                        Text("₹ %.0f".format(p.amount), color = Success, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
-            item { Spacer(Modifier.height(20.dp)) }
+        } else if (billPayments.isNotEmpty()) {
+            Spacer(Modifier.height(4.dp))
+            Text("${billPayments.size} payment${if (billPayments.size > 1) "s" else ""} recorded — tap to view", color = BrandCyan, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -272,7 +275,7 @@ private fun NoticesTab(items: List<AppNotification>, markRead: (String) -> Unit,
     Column(Modifier.fillMaxSize().systemBarsPadding().padding(horizontal = 16.dp)) {
         Spacer(Modifier.height(14.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Notices", color = Color.White, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold), modifier = Modifier.weight(1f))
+            Text("Notifications", color = Color.White, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold), modifier = Modifier.weight(1f))
             if (items.any { !it.isRead }) {
                 TextButton(onClick = markAll) { Text("Mark all read", color = BrandCyan) }
             }
@@ -280,7 +283,7 @@ private fun NoticesTab(items: List<AppNotification>, markRead: (String) -> Unit,
         Spacer(Modifier.height(8.dp))
         if (items.isEmpty()) {
             Box(Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
-                Text("No notices yet.", color = Slate400)
+                Text("No notifications yet.", color = Slate400)
             }
             return
         }
@@ -288,7 +291,7 @@ private fun NoticesTab(items: List<AppNotification>, markRead: (String) -> Unit,
             items(items, key = { it.id }) { n ->
                 GlassCard(modifier = Modifier.fillMaxWidth().clickable { if (!n.isRead) markRead(n.id) }) {
                     Row(verticalAlignment = Alignment.Top) {
-                        Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(if (n.isRead) Color.Transparent else BrandCyan))
+                        Box(Modifier.size(10.dp).clip(CircleShape).background(if (n.isRead) Color.Transparent else BrandCyan))
                         Spacer(Modifier.size(10.dp))
                         Column(Modifier.weight(1f)) {
                             Text(n.title, color = Color.White, fontWeight = FontWeight.SemiBold)
@@ -299,97 +302,6 @@ private fun NoticesTab(items: List<AppNotification>, markRead: (String) -> Unit,
                 }
             }
             item { Spacer(Modifier.height(20.dp)) }
-        }
-    }
-}
-
-@Composable
-private fun ComplaintsTab(s: TenantHomeUi, vm: TenantHomeViewModel) {
-    var showForm by remember { mutableStateOf(false) }
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var priority by remember { mutableStateOf("medium") }
-
-    LaunchedEffect(s.complaintSubmitted) {
-        if (s.complaintSubmitted) {
-            showForm = false; title = ""; description = ""; priority = "medium"
-            vm.consumeComplaintSubmitted()
-        }
-    }
-
-    Column(Modifier.fillMaxSize().systemBarsPadding().padding(horizontal = 16.dp)) {
-        Spacer(Modifier.height(14.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Issues", color = Color.White, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold), modifier = Modifier.weight(1f))
-            TextButton(onClick = { showForm = true }) { Text("+ New", color = BrandCyan) }
-        }
-        Spacer(Modifier.height(8.dp))
-
-        if (s.complaints.isEmpty()) {
-            Box(Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
-                Text("No complaints submitted yet.", color = Slate400)
-            }
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(s.complaints, key = { it.id }) { c -> ComplaintRow(c) }
-                item { Spacer(Modifier.height(20.dp)) }
-            }
-        }
-    }
-
-    if (showForm) {
-        AlertDialog(
-            onDismissRequest = { showForm = false },
-            title = { Text("New issue", fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(10.dp), colors = textFieldColors())
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Description") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp), colors = textFieldColors())
-                    Spacer(Modifier.height(8.dp))
-                    Text("Priority: $priority", color = Slate200, style = MaterialTheme.typography.bodySmall)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("low", "medium", "high", "urgent").forEach { p ->
-                            TextButton(onClick = { priority = p }) { Text(p, color = if (p == priority) BrandCyan else Slate400) }
-                        }
-                    }
-                    if (s.error != null) Text(s.error, color = Danger, style = MaterialTheme.typography.bodySmall)
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = title.isNotBlank() && description.isNotBlank() && !s.submittingComplaint,
-                    onClick = { vm.submitComplaint(title.trim(), description.trim(), priority) },
-                ) { Text(if (s.submittingComplaint) "Submitting…" else "Submit", color = BrandCyan) }
-            },
-            dismissButton = { TextButton(onClick = { showForm = false }) { Text("Cancel", color = Slate200) } },
-        )
-    }
-}
-
-@Composable
-private fun ComplaintRow(c: Complaint) {
-    val color = when (c.status) {
-        "open" -> Warning
-        "in_progress" -> BrandCyan
-        "resolved" -> Success
-        "closed" -> Slate400
-        else -> Slate200
-    }
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Row {
-            Column(Modifier.weight(1f)) {
-                Text(c.title, color = Color.White, fontWeight = FontWeight.SemiBold)
-                Text(c.description, color = Slate200, style = MaterialTheme.typography.bodySmall)
-                if (!c.adminResponse.isNullOrBlank()) {
-                    Spacer(Modifier.height(4.dp))
-                    Text("Admin: ${c.adminResponse}", color = BrandCyan, style = MaterialTheme.typography.bodySmall)
-                }
-                Text("${c.priority.uppercase()} · ${c.createdAt.take(10)}", color = Slate400, style = MaterialTheme.typography.labelSmall)
-            }
-            Box(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(color.copy(alpha = 0.15f)).padding(horizontal = 8.dp, vertical = 4.dp)) {
-                Text(c.status.replace('_', ' ').replaceFirstChar { it.uppercase() }, color = color, style = MaterialTheme.typography.labelSmall)
-            }
         }
     }
 }

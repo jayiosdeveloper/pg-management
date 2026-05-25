@@ -53,7 +53,7 @@ const membersSummary = asyncHandler(async (req, res) => {
 });
 
 const setStatus = asyncHandler(async (req, res) => {
-  const data = await service.setStatus(req.body);
+  const data = await service.setStatus(req.body, req.user);
   return ok(res, data, 'Status updated');
 });
 
