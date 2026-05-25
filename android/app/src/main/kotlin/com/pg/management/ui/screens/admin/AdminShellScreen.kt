@@ -44,6 +44,8 @@ fun AdminShellScreen(
     onAddTenant: () -> Unit,
     onOpenRoomDetail: (String) -> Unit,
     onAddRoom: () -> Unit,
+    onOpenBillDetail: (String) -> Unit,
+    onOpenMemberCredentials: (String) -> Unit,
     sessionVm: SessionViewModel = hiltViewModel(),
 ) {
     var selected by remember { mutableIntStateOf(0) }
@@ -88,9 +90,9 @@ fun AdminShellScreen(
             Box(Modifier.padding(padding)) {
                 when (selected) {
                     0 -> AdminDashboardScreen(onSeeAllTenants = { selected = 1 }, onSeeAllRooms = { selected = 2 })
-                    1 -> TenantsListScreen(onTenantClick = onOpenTenantDetail, onAddTenant = onAddTenant)
+                    1 -> TenantsListScreen(onTenantClick = onOpenTenantDetail, onAddTenant = onAddTenant, onShowInfo = onOpenMemberCredentials)
                     2 -> RoomsListScreen(onRoomClick = onOpenRoomDetail, onAddRoom = onAddRoom)
-                    3 -> AdminBillingScreen()
+                    3 -> AdminBillingScreen(onBillClick = onOpenBillDetail)
                     4 -> AdminMoreScreen(onLogout = sessionVm::logout, loggingOut = sessionState.loggingOut, session = sessionState.session)
                 }
             }

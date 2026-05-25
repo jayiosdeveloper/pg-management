@@ -46,7 +46,18 @@ const uploadAadhaarBack = asyncHandler(async (req, res) => {
   return ok(res, result, 'Aadhaar (back) uploaded');
 });
 
+const getCredentials = asyncHandler(async (req, res) => {
+  const data = await service.getCredentials(req.params.id);
+  return ok(res, data);
+});
+
+const resetMemberPassword = asyncHandler(async (req, res) => {
+  const result = await service.resetMemberPassword(req.params.id, req.body?.new_password);
+  return ok(res, result, 'Password reset');
+});
+
 module.exports = {
   list, get, createTenant, updateTenant, removeTenant,
   uploadPhoto, uploadAadhaarFront, uploadAadhaarBack,
+  getCredentials, resetMemberPassword,
 };

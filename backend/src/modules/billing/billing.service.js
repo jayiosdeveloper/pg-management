@@ -139,30 +139,41 @@ const bulkGenerate = async (input) => {
   const billing_month = normalizeMonth(input.billing_month);
   const dueDate = `${input.billing_month}-${String(input.due_day).padStart(2, '0')}`;
 
-  let tenantIds = input.tenant_ids;
-  if (input.generate_for_all_active) {
-    const { data } = await supabase.from('tenants').select('id').eq('status', 'active');
-    tenantIds = (data || []).map((t) => t.id);
+  // Fetch tenants with their per-tenant + room rent so we can default the amount
+  let baseQuery = supabase
+    .from('tenants')
+    .select('id, monthly_rent, room:rooms(monthly_rent)')
+    .eq('status', 'active');
+  if (!input.generate_for_all_active && input.tenant_ids && input.tenant_ids.length > 0) {
+    baseQuery = supabase
+      .from('tenants')
+      .select('id, monthly_rent, room:rooms(monthly_rent)')
+      .in('id', input.tenant_ids);
   }
-  if (!tenantIds || tenantIds.length === 0) return { created: 0, skipped: 0 };
+  const { data: tenants } = await baseQuery;
+  if (!tenants || tenants.length === 0) return { created: 0, skipped: 0, created_ids: [] };
 
   const created = [];
   const skipped = [];
-  for (const tid of tenantIds) {
+  for (const t of tenants) {
+    const amount = input.amount != null
+      ? input.amount
+      : Number(t.monthly_rent ?? t.room?.monthly_rent ?? 0);
+    if (amount <= 0) { skipped.push(t.id); continue; }
     if (input.skip_if_exists) {
       const { data: existing } = await supabase.from('bills')
-        .select('id').eq('tenant_id', tid).eq('category', input.category).eq('billing_month', billing_month).maybeSingle();
-      if (existing) { skipped.push(tid); continue; }
+        .select('id').eq('tenant_id', t.id).eq('category', input.category).eq('billing_month', billing_month).maybeSingle();
+      if (existing) { skipped.push(t.id); continue; }
     }
     const { data, error } = await supabase.from('bills').insert({
-      tenant_id: tid,
+      tenant_id: t.id,
       category: input.category,
-      amount: input.amount,
+      amount,
       billing_month,
       due_date: dueDate,
       description: input.description || null,
     }).select('id').single();
-    if (error) { skipped.push(tid); continue; }
+    if (error) { skipped.push(t.id); continue; }
     created.push(data.id);
   }
   return { created: created.length, skipped: skipped.length, created_ids: created };

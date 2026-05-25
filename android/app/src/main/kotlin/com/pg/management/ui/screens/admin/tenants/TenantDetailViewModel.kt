@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pg.management.core.events.RefreshEvents
 import com.pg.management.domain.model.Tenant
 import com.pg.management.domain.repository.TenantRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,6 +29,7 @@ data class TenantDetailUi(
 @HiltViewModel
 class TenantDetailViewModel @Inject constructor(
     private val repo: TenantRepository,
+    private val refreshEvents: RefreshEvents,
     savedState: SavedStateHandle,
 ) : ViewModel() {
     private val tenantId: String = checkNotNull(savedState["tenantId"]) { "tenantId arg missing" }
@@ -70,6 +72,8 @@ class TenantDetailViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 repo.delete(tenantId)
+                refreshEvents.notifyTenantsChanged()
+                refreshEvents.notifyRoomsChanged()
                 _state.update { it.copy(deleting = false, deleted = true) }
             } catch (e: Throwable) {
                 _state.update { it.copy(deleting = false, error = e.message ?: "Delete failed") }

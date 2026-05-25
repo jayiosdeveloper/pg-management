@@ -11,6 +11,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.pg.management.ui.screens.admin.AdminShellScreen
+import com.pg.management.ui.screens.admin.billing.BillDetailScreen
+import com.pg.management.ui.screens.admin.credentials.MemberCredentialsScreen
 import com.pg.management.ui.screens.admin.rooms.RoomFormScreen
 import com.pg.management.ui.screens.admin.tenants.TenantDetailScreen
 import com.pg.management.ui.screens.admin.tenants.TenantFormScreen
@@ -52,6 +54,8 @@ fun AppNavigator(startDestination: String) {
                 onAddTenant = { nav.navigate(Routes.tenantForm()) },
                 onOpenRoomDetail = { id -> nav.navigate(Routes.roomForm(id)) },
                 onAddRoom = { nav.navigate(Routes.roomForm()) },
+                onOpenBillDetail = { id -> nav.navigate(Routes.billDetail(id)) },
+                onOpenMemberCredentials = { id -> nav.navigate(Routes.memberCredentials(id)) },
             )
         }
 
@@ -60,7 +64,6 @@ fun AppNavigator(startDestination: String) {
             arguments = listOf(navArgument("tenantId") { type = NavType.StringType; defaultValue = "" }),
         ) { backStack ->
             val raw = backStack.arguments?.getString("tenantId").orEmpty()
-            // Hilt's SavedStateHandle picks up the arg automatically via the route
             TenantFormScreen(
                 onBack = { nav.popBackStack() },
                 onSaved = { tenantId ->
@@ -82,10 +85,24 @@ fun AppNavigator(startDestination: String) {
         }
 
         composable(
+            route = Routes.MEMBER_CREDENTIALS,
+            arguments = listOf(navArgument("tenantId") { type = NavType.StringType }),
+        ) {
+            MemberCredentialsScreen(onBack = { nav.popBackStack() })
+        }
+
+        composable(
             route = Routes.ROOM_FORM,
             arguments = listOf(navArgument("roomId") { type = NavType.StringType; defaultValue = "" }),
         ) {
             RoomFormScreen(onBack = { nav.popBackStack() }, onSaved = { nav.popBackStack() })
+        }
+
+        composable(
+            route = Routes.BILL_DETAIL,
+            arguments = listOf(navArgument("billId") { type = NavType.StringType }),
+        ) {
+            BillDetailScreen(onBack = { nav.popBackStack() })
         }
 
         composable(Routes.TENANT_HOME) {

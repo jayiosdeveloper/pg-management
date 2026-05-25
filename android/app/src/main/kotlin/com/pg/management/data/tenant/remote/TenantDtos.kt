@@ -125,3 +125,23 @@ data class TenantUploadResponse(
     val url: String,
     @Json(name = "public_id") val publicId: String,
 )
+
+@JsonClass(generateAdapter = true)
+data class TenantCredentialsResponse(
+    @Json(name = "tenant_id") val tenantId: String,
+    @Json(name = "user_id") val userId: String,
+    @Json(name = "user_code") val userCode: String,
+    val email: String?,
+    @Json(name = "full_name") val fullName: String,
+    val phone: String?,
+)
+
+@JsonClass(generateAdapter = true)
+data class ResetPasswordRequest(@Json(name = "new_password") val newPassword: String?)
+
+@JsonClass(generateAdapter = true)
+data class ResetPasswordResponse(
+    @Json(name = "user_code") val userCode: String,
+    val email: String?,
+    @Json(name = "new_password") val newPassword: String,
+)

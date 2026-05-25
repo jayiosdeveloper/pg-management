@@ -3,6 +3,7 @@ package com.pg.management.ui.screens.admin.rooms
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pg.management.core.events.RefreshEvents
 import com.pg.management.domain.repository.RoomInput
 import com.pg.management.domain.repository.RoomRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,6 +31,7 @@ data class RoomFormUi(
 @HiltViewModel
 class RoomFormViewModel @Inject constructor(
     private val repo: RoomRepository,
+    private val refreshEvents: RefreshEvents,
     savedState: SavedStateHandle,
 ) : ViewModel() {
     // Coerce empty-string nav arg to null so the "Add Room" flow is not mistaken for "Edit"
@@ -75,6 +77,7 @@ class RoomFormViewModel @Inject constructor(
                     description = s.description.trim().ifBlank { null },
                 )
                 if (s.roomId == null) repo.create(input) else repo.update(s.roomId, input)
+                refreshEvents.notifyRoomsChanged()
                 _state.update { it.copy(saving = false, saved = true) }
             } catch (e: Throwable) {
                 _state.update { it.copy(saving = false, error = e.message ?: "Save failed") }

@@ -2,6 +2,7 @@ const supabase = require('../../lib/supabase');
 const { hashPassword } = require('../auth/auth.service');
 const { newTenantCode, newTempPassword } = require('../../utils/codes');
 const { NotFound, Conflict, BadRequest } = require('../../utils/errors');
+const Joi = require('joi');
 const { uploadBuffer, destroy, publicIdFromUrl } = require('../../lib/cloudinary');
 
 const TENANT_SELECT = `
@@ -275,4 +276,30 @@ const refreshRoomStatus = async (roomId) => {
   await supabase.from('rooms').update({ status }).eq('id', roomId);
 };
 
-module.exports = { create, list, getById, update, remove, uploadDocument, refreshRoomStatus };
+const getCredentials = async (tenantId) => {
+  const tenant = await getById(tenantId);
+  return {
+    tenant_id: tenant.id,
+    user_id: tenant.user.id,
+    user_code: tenant.user.user_code,
+    email: tenant.user.email,
+    full_name: tenant.user.full_name,
+    phone: tenant.user.phone,
+  };
+};
+
+const resetMemberPassword = async (tenantId, newPassword) => {
+  const tenant = await getById(tenantId);
+  const password = (newPassword && String(newPassword).trim().length >= 6)
+    ? String(newPassword).trim()
+    : newTempPassword();
+  const password_hash = await hashPassword(password);
+  const { error } = await supabase.from('users').update({ password_hash }).eq('id', tenant.user.id);
+  if (error) throw error;
+  // Revoke existing refresh tokens
+  await supabase.from('refresh_tokens').update({ revoked_at: new Date().toISOString() })
+    .eq('user_id', tenant.user.id).is('revoked_at', null);
+  return { user_code: tenant.user.user_code, email: tenant.user.email, new_password: password };
+};
+
+module.exports = { create, list, getById, update, remove, uploadDocument, refreshRoomStatus, getCredentials, resetMemberPassword };

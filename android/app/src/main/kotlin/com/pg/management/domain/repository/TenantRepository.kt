@@ -13,7 +13,18 @@ interface TenantRepository {
     suspend fun uploadPhoto(id: String, uri: Uri): String
     suspend fun uploadAadhaarFront(id: String, uri: Uri): String
     suspend fun uploadAadhaarBack(id: String, uri: Uri): String
+    suspend fun credentials(id: String): MemberCredentialsInfo
+    suspend fun resetPassword(id: String, newPassword: String?): TenantCredentials
 }
+
+data class MemberCredentialsInfo(
+    val tenantId: String,
+    val userId: String,
+    val userCode: String,
+    val email: String?,
+    val fullName: String,
+    val phone: String?,
+)
 
 data class TenantInput(
     val fullName: String,

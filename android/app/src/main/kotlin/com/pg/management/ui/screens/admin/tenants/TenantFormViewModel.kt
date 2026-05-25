@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pg.management.core.events.RefreshEvents
 import com.pg.management.domain.model.Room
 import com.pg.management.domain.model.TenantCredentials
 import com.pg.management.domain.repository.RoomRepository
@@ -63,6 +64,7 @@ data class TenantFormUi(
 class TenantFormViewModel @Inject constructor(
     private val tenants: TenantRepository,
     private val rooms: RoomRepository,
+    private val refreshEvents: RefreshEvents,
     savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -155,9 +157,13 @@ class TenantFormViewModel @Inject constructor(
                 )
                 if (s.tenantId == null) {
                     val (tenant, creds) = tenants.create(input)
+                    refreshEvents.notifyTenantsChanged()
+                    refreshEvents.notifyRoomsChanged()
                     _state.update { it.copy(saving = false, tenantId = tenant.id, aadhaarWasSet = true, savedCredentials = creds, savedTenantId = tenant.id) }
                 } else {
                     val updated = tenants.update(s.tenantId, input)
+                    refreshEvents.notifyTenantsChanged()
+                    refreshEvents.notifyRoomsChanged()
                     _state.update { it.copy(saving = false, aadhaarWasSet = !updated.idProofNumber.isNullOrBlank(), savedTenantId = updated.id) }
                 }
             } catch (e: Throwable) {

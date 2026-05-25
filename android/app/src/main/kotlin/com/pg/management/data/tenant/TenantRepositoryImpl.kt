@@ -4,10 +4,12 @@ import android.content.Context
 import android.net.Uri
 import com.pg.management.core.network.safeCall
 import com.pg.management.data.tenant.remote.CreateTenantRequest
+import com.pg.management.data.tenant.remote.ResetPasswordRequest
 import com.pg.management.data.tenant.remote.TenantApi
 import com.pg.management.data.tenant.remote.UpdateTenantRequest
 import com.pg.management.domain.model.Tenant
 import com.pg.management.domain.model.TenantCredentials
+import com.pg.management.domain.repository.MemberCredentialsInfo
 import com.pg.management.domain.repository.TenantInput
 import com.pg.management.domain.repository.TenantRepository
 import com.squareup.moshi.Moshi
@@ -115,4 +117,14 @@ class TenantRepositoryImpl @Inject constructor(
             val part = MultipartBody.Part.createFormData("file", fileName, body)
             call(part)
         }
+
+    override suspend fun credentials(id: String): MemberCredentialsInfo {
+        val r = safeCall(moshi) { api.credentials(id) }
+        return MemberCredentialsInfo(r.tenantId, r.userId, r.userCode, r.email, r.fullName, r.phone)
+    }
+
+    override suspend fun resetPassword(id: String, newPassword: String?): TenantCredentials {
+        val r = safeCall(moshi) { api.resetPassword(id, ResetPasswordRequest(newPassword?.takeIf { it.isNotBlank() })) }
+        return TenantCredentials(r.userCode, r.newPassword)
+    }
 }

@@ -19,4 +19,8 @@ router.post('/:id/photo', imageUpload.single('file'), c.uploadPhoto);
 router.post('/:id/aadhaar-front', imageUpload.single('file'), c.uploadAadhaarFront);
 router.post('/:id/aadhaar-back', imageUpload.single('file'), c.uploadAadhaarBack);
 
+// Credentials view + reset password
+router.get('/:id/credentials', c.getCredentials);
+router.post('/:id/reset-password', c.resetMemberPassword);
+
 module.exports = router;

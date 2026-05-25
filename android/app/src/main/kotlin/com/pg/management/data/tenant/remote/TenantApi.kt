@@ -45,4 +45,10 @@ interface TenantApi {
     @Multipart
     @POST("tenants/{id}/aadhaar-back")
     suspend fun uploadAadhaarBack(@Path("id") id: String, @Part file: MultipartBody.Part): ApiEnvelope<TenantUploadResponse>
+
+    @GET("tenants/{id}/credentials")
+    suspend fun credentials(@Path("id") id: String): ApiEnvelope<TenantCredentialsResponse>
+
+    @POST("tenants/{id}/reset-password")
+    suspend fun resetPassword(@Path("id") id: String, @Body req: ResetPasswordRequest): ApiEnvelope<ResetPasswordResponse>
 }

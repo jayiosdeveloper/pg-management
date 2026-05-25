@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.CircularProgressIndicator
@@ -58,6 +59,7 @@ import kotlinx.coroutines.delay
 fun TenantsListScreen(
     onTenantClick: (String) -> Unit,
     onAddTenant: () -> Unit,
+    onShowInfo: (String) -> Unit,
     vm: TenantsListViewModel = hiltViewModel(),
 ) {
     val s by vm.state.collectAsState()
@@ -131,7 +133,7 @@ fun TenantsListScreen(
                 s.error != null -> EmptyState(s.error!!, isError = true)
                 else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(s.tenants, key = { it.id }) { t ->
-                        TenantRow(t, onClick = { onTenantClick(t.id) })
+                        TenantRow(t, onClick = { onTenantClick(t.id) }, onInfo = { onShowInfo(t.id) })
                     }
                     item { Spacer(Modifier.height(80.dp)) }
                 }
@@ -141,7 +143,7 @@ fun TenantsListScreen(
 }
 
 @Composable
-private fun TenantRow(t: Tenant, onClick: () -> Unit) {
+private fun TenantRow(t: Tenant, onClick: () -> Unit, onInfo: () -> Unit) {
     val shape = RoundedCornerShape(16.dp)
     Row(
         modifier = Modifier
@@ -179,6 +181,13 @@ private fun TenantRow(t: Tenant, onClick: () -> Unit) {
             )
         }
         StatusChip(t.status)
+        androidx.compose.material3.IconButton(onClick = onInfo) {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = "Credentials",
+                tint = com.pg.management.ui.theme.BrandCyan,
+            )
+        }
     }
 }
 

@@ -8,10 +8,15 @@ object Routes {
 
     const val TENANT_FORM = "tenant_form?tenantId={tenantId}"
     const val TENANT_DETAIL = "tenant_detail/{tenantId}"
+    const val MEMBER_CREDENTIALS = "member_credentials/{tenantId}"
 
     const val ROOM_FORM = "room_form?roomId={roomId}"
 
+    const val BILL_DETAIL = "bill_detail/{billId}"
+
     fun tenantForm(tenantId: String? = null) = "tenant_form?tenantId=${tenantId.orEmpty()}"
     fun tenantDetail(id: String) = "tenant_detail/$id"
+    fun memberCredentials(id: String) = "member_credentials/$id"
     fun roomForm(roomId: String? = null) = "room_form?roomId=${roomId.orEmpty()}"
+    fun billDetail(id: String) = "bill_detail/$id"
 }

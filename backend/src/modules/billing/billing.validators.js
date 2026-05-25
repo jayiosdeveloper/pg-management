@@ -35,13 +35,16 @@ const recordPaymentSchema = Joi.object({
 });
 
 // Bulk generate one or many monthly bills for one or many tenants at once.
+// `amount` is optional: when omitted, each tenant's monthly_rent (falling back
+// to their room's monthly_rent) is used so the admin can issue rent bills for
+// the whole PG with just a month selection.
 const bulkGenerateSchema = Joi.object({
   tenant_ids: Joi.array().items(Joi.string().uuid()).optional(),
-  generate_for_all_active: Joi.boolean().default(false),
-  category: Joi.string().valid(...CATEGORIES).required(),
+  generate_for_all_active: Joi.boolean().default(true),
+  category: Joi.string().valid(...CATEGORIES).default('rent'),
   billing_month: Joi.string().pattern(/^\d{4}-\d{2}$/).required(),
   due_day: Joi.number().integer().min(1).max(28).default(10),
-  amount: Joi.number().min(0).required(),
+  amount: Joi.number().min(0).optional(),
   description: Joi.string().trim().max(500).allow(null, ''),
   skip_if_exists: Joi.boolean().default(true),
 }).or('tenant_ids', 'generate_for_all_active');
