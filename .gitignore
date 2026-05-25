@@ -1,0 +1,49 @@
+# =====================================================
+# Root .gitignore for PG Management monorepo
+# =====================================================
+
+# macOS / OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Editors / IDEs
+.idea/
+.vscode/
+*.iml
+.fleet/
+
+# =====================================================
+# Backend (Node.js)
+# =====================================================
+backend/node_modules/
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/dist/
+backend/build/
+backend/coverage/
+backend/uploads/
+backend/tmp/
+backend/*.log
+backend/firebase-service-account.json
+
+# =====================================================
+# Android (Gradle)
+# =====================================================
+android/.gradle/
+android/build/
+android/app/build/
+android/captures/
+android/.externalNativeBuild/
+android/.cxx/
+android/.kotlin/
+android/local.properties
+android/scripts/.env.local
+android/*.log
+android/release/
+android/keystore/*.jks
+android/keystore/*.keystore
+android/app/google-services.json
+android/google-services.json

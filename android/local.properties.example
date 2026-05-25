@@ -1,0 +1,11 @@
+# Copy to local.properties and edit. Do NOT commit local.properties.
+
+# Path to Android SDK
+sdk.dir=/opt/homebrew/share/android-commandlinetools
+
+# Backend API base URL. Choose one:
+# - Android emulator -> host:    http://10.0.2.2:4000/api/v1/
+# - Physical device on same Wi-Fi (use your laptop's LAN IP, find with `ipconfig getifaddr en0`):
+#                                 http://192.168.x.x:4000/api/v1/
+# - Production:                   https://your-api.onrender.com/api/v1/
+API_BASE_URL=http://10.0.2.2:4000/api/v1/

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand palette: deep blue + purple + cyan -->
+    <color name="brand_deep">#0B1437</color>
+    <color name="brand_primary">#3B5BFF</color>
+    <color name="brand_purple">#7C3AED</color>
+    <color name="brand_cyan">#22D3EE</color>
+    <color name="splash_bg">#0B1437</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+</resources>

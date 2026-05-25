@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">PG Management</string>
+    <string name="app_tagline">Smart PG &amp; Hostel ERP</string>
+
+    <!-- Login -->
+    <string name="login_title">Welcome back</string>
+    <string name="login_subtitle">Sign in with the credentials provided by your PG admin</string>
+    <string name="login_id_label">Email or User ID</string>
+    <string name="login_id_placeholder">admin@pg.local or T-AB12CD</string>
+    <string name="login_password_label">Password</string>
+    <string name="login_remember">Remember me</string>
+    <string name="login_button">Sign In</string>
+    <string name="login_forgot">Forgot password?</string>
+
+    <!-- Forgot password -->
+    <string name="forgot_title">Forgot your password?</string>
+    <string name="forgot_subtitle">Only your PG admin can reset your password. Please contact them with your User ID. The admin will issue a new password and share it with you.</string>
+    <string name="forgot_back">Back to sign in</string>
+
+    <!-- Common -->
+    <string name="action_retry">Retry</string>
+    <string name="action_ok">OK</string>
+    <string name="action_cancel">Cancel</string>
+</resources>
