@@ -209,7 +209,7 @@ const summary = async (currentUser) => {
  * Member-list summary for a given month: every active member with their
  * rent bill status. Powers the simple "Bills" tab on the admin app.
  */
-const membersSummary = async ({ billing_month }) => {
+const membersSummary = async ({ billing_month, category = 'rent' }) => {
   const monthDate = `${billing_month}-01`;
   const { data: tenants } = await supabase
     .from('tenants')
@@ -228,7 +228,7 @@ const membersSummary = async ({ billing_month }) => {
     const { data: bills } = await supabase
       .from('bills')
       .select('id, tenant_id, amount, amount_paid, status')
-      .eq('category', 'rent')
+      .eq('category', category)
       .eq('billing_month', monthDate)
       .in('tenant_id', tenantIds);
     for (const b of bills || []) billsByTenant.set(b.tenant_id, b);
@@ -237,6 +237,7 @@ const membersSummary = async ({ billing_month }) => {
   return (tenants || []).map((t) => {
     const bill = billsByTenant.get(t.id) || null;
     const monthlyRent = Number(t.monthly_rent ?? 0);
+    const defaultAmount = category === 'rent' ? monthlyRent : 0;
     return {
       tenant_id: t.id,
       user: t.user || null,
@@ -245,7 +246,7 @@ const membersSummary = async ({ billing_month }) => {
       monthly_rent: monthlyRent,
       bill,
       status: bill?.status ?? 'unbilled',
-      amount: Number(bill?.amount ?? monthlyRent),
+      amount: Number(bill?.amount ?? defaultAmount),
       amount_paid: Number(bill?.amount_paid ?? 0),
     };
   });
@@ -266,7 +267,7 @@ const membersSummary = async ({ billing_month }) => {
  *                (capped at the bill total).
  *   - "unpaid":  deletes every payment row for the bill and resets amount_paid.
  */
-const setStatus = async ({ tenant_id, billing_month, status, amount, paid_amount }, recordedBy) => {
+const setStatus = async ({ tenant_id, billing_month, status, category = 'rent', amount, paid_amount }, recordedBy) => {
   const monthDate = `${billing_month}-01`;
 
   const { data: tenant } = await supabase
@@ -274,21 +275,30 @@ const setStatus = async ({ tenant_id, billing_month, status, amount, paid_amount
     .eq('id', tenant_id).maybeSingle();
   if (!tenant) throw NotFound('Member not found');
 
-  const defaultAmount = Number(amount ?? tenant.monthly_rent ?? tenant.room?.monthly_rent ?? 0);
+  // Default amount for new bills:
+  //   - rent: tenant's monthly_rent (or room's)
+  //   - other categories: must be set on the bill already (electricity bills
+  //     are created by /electricity); if there's no existing bill we can't
+  //     guess an amount, so refuse.
+  const rentDefault = Number(amount ?? tenant.monthly_rent ?? tenant.room?.monthly_rent ?? 0);
 
   const { data: existing } = await supabase
     .from('bills').select('*')
-    .eq('tenant_id', tenant_id).eq('billing_month', monthDate).eq('category', 'rent').maybeSingle();
+    .eq('tenant_id', tenant_id).eq('billing_month', monthDate).eq('category', category).maybeSingle();
 
   const dueDate = `${billing_month}-10`;
   let billId = existing?.id;
-  let billAmount = existing?.amount != null ? Number(existing.amount) : defaultAmount;
+  let billAmount = existing?.amount != null ? Number(existing.amount) : rentDefault;
   let currentPaid = existing?.amount_paid != null ? Number(existing.amount_paid) : 0;
 
   if (!existing) {
+    if (category !== 'rent' && rentDefault <= 0) {
+      throw BadRequest(`No ${category} bill exists for this member and month. Generate one first.`);
+    }
+    const desc = category === 'rent' ? 'Monthly rent' : `${category} bill`;
     const { data: inserted, error } = await supabase.from('bills').insert({
-      tenant_id, category: 'rent', amount: defaultAmount,
-      billing_month: monthDate, due_date: dueDate, description: 'Monthly rent',
+      tenant_id, category, amount: rentDefault,
+      billing_month: monthDate, due_date: dueDate, description: desc,
     }).select('id, amount, amount_paid').single();
     if (error) throw error;
     billId = inserted.id;

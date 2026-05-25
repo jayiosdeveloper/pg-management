@@ -15,15 +15,6 @@ router.use('/notifications', require('../modules/notification/notification.route
 router.use('/complaints', require('../modules/complaint/complaint.routes'));
 router.use('/visitors', require('../modules/visitor/visitor.routes'));
 router.use('/analytics', require('../modules/analytics/analytics.routes'));
-
-// Future modules will be mounted here
-// router.use('/bills', require('../modules/billing/billing.routes'));
-// router.use('/payments', require('../modules/payment/payment.routes'));
-// router.use('/notifications', require('../modules/notification/notification.routes'));
-// router.use('/complaints', require('../modules/complaint/complaint.routes'));
-// router.use('/visitors', require('../modules/visitor/visitor.routes'));
-// router.use('/analytics', require('../modules/analytics/analytics.routes'));
-// router.use('/upload', require('../modules/upload/upload.routes'));
-// router.use('/invoices', require('../modules/pdf/pdf.routes'));
+router.use('/electricity', require('../modules/electricity/electricity.routes'));
 
 module.exports = router;

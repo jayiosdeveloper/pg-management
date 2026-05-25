@@ -15,6 +15,8 @@ object Routes {
     const val WORKER_FORM = "worker_form?workerId={workerId}"
     const val WORKER_CREDENTIALS = "worker_credentials/{workerId}"
 
+    const val ELECTRICITY = "electricity"
+
     fun tenantForm(tenantId: String? = null) = "tenant_form?tenantId=${tenantId.orEmpty()}"
     fun tenantDetail(id: String) = "tenant_detail/$id"
     fun memberCredentials(id: String) = "member_credentials/$id"

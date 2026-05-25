@@ -6,6 +6,7 @@ import com.pg.management.data.common.AuthInterceptor
 import com.pg.management.data.common.TokenAuthenticator
 import com.pg.management.data.billing.remote.BillingApi
 import com.pg.management.data.complaint.remote.ComplaintApi
+import com.pg.management.data.electricity.remote.ElectricityApi
 import com.pg.management.data.notification.remote.NotificationApi
 import com.pg.management.data.room.remote.RoomApi
 import com.pg.management.data.tenant.remote.TenantApi
@@ -86,4 +87,8 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideWorkerApi(retrofit: Retrofit): WorkerApi = retrofit.create(WorkerApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideElectricityApi(retrofit: Retrofit): ElectricityApi = retrofit.create(ElectricityApi::class.java)
 }

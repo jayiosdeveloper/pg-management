@@ -170,6 +170,7 @@ data class SetStatusRequest(
     @Json(name = "tenant_id") val tenantId: String,
     @Json(name = "billing_month") val billingMonth: String,
     val status: String,           // "paid" | "partial" | "unpaid"
+    val category: String = "rent",
     val amount: Double? = null,
     @Json(name = "paid_amount") val paidAmount: Double? = null,
 )

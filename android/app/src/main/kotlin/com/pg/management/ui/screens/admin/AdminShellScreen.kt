@@ -50,6 +50,7 @@ fun AdminShellScreen(
     onOpenWorkerDetail: (String) -> Unit,
     onAddWorker: () -> Unit,
     onOpenWorkerCredentials: (String) -> Unit,
+    onOpenElectricity: () -> Unit,
     sessionVm: SessionViewModel = hiltViewModel(),
 ) {
     var selected by remember { mutableIntStateOf(0) }
@@ -98,7 +99,7 @@ fun AdminShellScreen(
                     1 -> TenantsListScreen(onTenantClick = onOpenTenantDetail, onAddTenant = onAddTenant, onShowInfo = onOpenMemberCredentials)
                     2 -> WorkersListScreen(onWorkerClick = onOpenWorkerDetail, onAddWorker = onAddWorker, onShowInfo = onOpenWorkerCredentials)
                     3 -> RoomsListScreen(onRoomClick = onOpenRoomDetail, onAddRoom = onAddRoom)
-                    4 -> AdminBillingScreen()
+                    4 -> AdminBillingScreen(onOpenElectricity = onOpenElectricity)
                     5 -> AdminMoreScreen(onLogout = sessionVm::logout, loggingOut = sessionState.loggingOut, session = sessionState.session)
                 }
             }

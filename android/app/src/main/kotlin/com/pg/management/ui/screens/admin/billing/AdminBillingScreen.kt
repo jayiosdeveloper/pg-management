@@ -56,7 +56,10 @@ import com.pg.management.ui.theme.Warning
 import java.time.YearMonth
 
 @Composable
-fun AdminBillingScreen(vm: AdminBillingViewModel = hiltViewModel()) {
+fun AdminBillingScreen(
+    onOpenElectricity: () -> Unit,
+    vm: AdminBillingViewModel = hiltViewModel(),
+) {
     val s by vm.state.collectAsState()
 
     s.partialFor?.let { row -> PartialAmountDialog(row, s.error, onDismiss = { vm.openPartial(null) }, onSubmit = { amt -> vm.mark(row, "partial", paidAmount = amt) }) }
@@ -74,6 +77,8 @@ fun AdminBillingScreen(vm: AdminBillingViewModel = hiltViewModel()) {
         Column(Modifier.fillMaxSize().systemBarsPadding().padding(padding).padding(horizontal = 16.dp)) {
             Spacer(Modifier.height(12.dp))
             Text("Bills", color = Color.White, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold))
+            Spacer(Modifier.height(8.dp))
+            CategoryToggle(category = s.category, onChange = vm::setCategory, onOpenElectricity = onOpenElectricity)
             Spacer(Modifier.height(8.dp))
             MonthPicker(s.month, onChange = vm::setMonth)
             Spacer(Modifier.height(8.dp))
@@ -95,6 +100,38 @@ fun AdminBillingScreen(vm: AdminBillingViewModel = hiltViewModel()) {
                     item { Spacer(Modifier.height(60.dp)) }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CategoryToggle(category: String, onChange: (String) -> Unit, onOpenElectricity: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color.White.copy(alpha = 0.06f))
+                .padding(4.dp),
+        ) {
+            listOf("rent" to "Rent", "electricity" to "Electricity").forEach { (key, label) ->
+                val selected = category == key
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (selected) BrandCyan.copy(alpha = 0.18f) else Color.Transparent)
+                        .clickable(onClick = { onChange(key) })
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(label, color = if (selected) BrandCyan else Slate200, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+        if (category == "electricity") {
+            Spacer(Modifier.height(0.dp))
+            TextButton(onClick = onOpenElectricity) { Text("+ Reading", color = BrandCyan, fontWeight = FontWeight.SemiBold) }
         }
     }
 }

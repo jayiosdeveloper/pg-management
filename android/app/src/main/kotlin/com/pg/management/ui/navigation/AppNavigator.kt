@@ -12,6 +12,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.pg.management.ui.screens.admin.AdminShellScreen
 import com.pg.management.ui.screens.admin.credentials.MemberCredentialsScreen
+import com.pg.management.ui.screens.admin.electricity.ElectricityScreen
 import com.pg.management.ui.screens.admin.rooms.RoomFormScreen
 import com.pg.management.ui.screens.admin.tenants.TenantDetailScreen
 import com.pg.management.ui.screens.admin.tenants.TenantFormScreen
@@ -53,6 +54,7 @@ fun AppNavigator(startDestination: String) {
                 onOpenWorkerDetail = { id -> nav.navigate(Routes.workerForm(id)) },
                 onAddWorker = { nav.navigate(Routes.workerForm()) },
                 onOpenWorkerCredentials = { id -> nav.navigate(Routes.workerCredentials(id)) },
+                onOpenElectricity = { nav.navigate(Routes.ELECTRICITY) },
             )
         }
 
@@ -107,6 +109,10 @@ fun AppNavigator(startDestination: String) {
             arguments = listOf(navArgument("workerId") { type = NavType.StringType }),
         ) {
             WorkerCredentialsScreen(onBack = { nav.popBackStack() })
+        }
+
+        composable(Routes.ELECTRICITY) {
+            ElectricityScreen(onBack = { nav.popBackStack() })
         }
 
         composable(Routes.TENANT_HOME) {
