@@ -32,7 +32,10 @@ class RoomFormViewModel @Inject constructor(
     private val repo: RoomRepository,
     savedState: SavedStateHandle,
 ) : ViewModel() {
-    private val _state = MutableStateFlow(RoomFormUi(roomId = savedState["roomId"]))
+    // Coerce empty-string nav arg to null so the "Add Room" flow is not mistaken for "Edit"
+    private val _state = MutableStateFlow(
+        RoomFormUi(roomId = (savedState.get<String>("roomId"))?.takeIf { it.isNotBlank() })
+    )
     val state: StateFlow<RoomFormUi> = _state.asStateFlow()
 
     init { _state.value.roomId?.let { load(it) } }
