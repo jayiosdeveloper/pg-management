@@ -6,8 +6,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Apartment
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -25,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pg.management.ui.components.GradientBackground
+import com.pg.management.ui.screens.admin.billing.AdminBillingScreen
 import com.pg.management.ui.screens.admin.dashboard.AdminDashboardScreen
 import com.pg.management.ui.screens.admin.more.AdminMoreScreen
 import com.pg.management.ui.screens.admin.rooms.RoomsListScreen
@@ -46,9 +49,10 @@ fun AdminShellScreen(
     var selected by remember { mutableIntStateOf(0) }
     val tabs = remember {
         listOf(
-            AdminTab("Dashboard", Icons.Outlined.Dashboard),
+            AdminTab("Home", Icons.Outlined.Dashboard),
             AdminTab("Tenants", Icons.Outlined.People),
             AdminTab("Rooms", Icons.Outlined.Apartment),
+            AdminTab("Bills", Icons.Outlined.Payments),
             AdminTab("More", Icons.Outlined.MoreHoriz),
         )
     }
@@ -67,7 +71,7 @@ fun AdminShellScreen(
                         selected = selected == i,
                         onClick = { selected = i },
                         icon = { Icon(tab.icon, contentDescription = tab.label) },
-                        label = { Text(tab.label) },
+                        label = { Text(tab.label, style = MaterialTheme.typography.labelSmall) },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = BrandCyan,
                             unselectedIconColor = Slate400,
@@ -86,7 +90,8 @@ fun AdminShellScreen(
                     0 -> AdminDashboardScreen(onSeeAllTenants = { selected = 1 }, onSeeAllRooms = { selected = 2 })
                     1 -> TenantsListScreen(onTenantClick = onOpenTenantDetail, onAddTenant = onAddTenant)
                     2 -> RoomsListScreen(onRoomClick = onOpenRoomDetail, onAddRoom = onAddRoom)
-                    3 -> AdminMoreScreen(onLogout = sessionVm::logout, loggingOut = sessionState.loggingOut, session = sessionState.session)
+                    3 -> AdminBillingScreen()
+                    4 -> AdminMoreScreen(onLogout = sessionVm::logout, loggingOut = sessionState.loggingOut, session = sessionState.session)
                 }
             }
         }

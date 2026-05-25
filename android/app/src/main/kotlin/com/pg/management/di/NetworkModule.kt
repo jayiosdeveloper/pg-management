@@ -4,6 +4,9 @@ import com.pg.management.BuildConfig
 import com.pg.management.data.auth.remote.AuthApi
 import com.pg.management.data.common.AuthInterceptor
 import com.pg.management.data.common.TokenAuthenticator
+import com.pg.management.data.billing.remote.BillingApi
+import com.pg.management.data.complaint.remote.ComplaintApi
+import com.pg.management.data.notification.remote.NotificationApi
 import com.pg.management.data.room.remote.RoomApi
 import com.pg.management.data.tenant.remote.TenantApi
 import com.squareup.moshi.Moshi
@@ -66,4 +69,16 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideRoomApi(retrofit: Retrofit): RoomApi = retrofit.create(RoomApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideBillingApi(retrofit: Retrofit): BillingApi = retrofit.create(BillingApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideNotificationApi(retrofit: Retrofit): NotificationApi = retrofit.create(NotificationApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideComplaintApi(retrofit: Retrofit): ComplaintApi = retrofit.create(ComplaintApi::class.java)
 }
